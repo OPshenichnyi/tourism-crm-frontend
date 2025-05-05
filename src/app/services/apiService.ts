@@ -110,6 +110,34 @@ const apiService = {
         throw error;
       }
     },
+    register: async (
+      token: string,
+      data: {
+        password: string;
+        firstName: string;
+        lastName: string;
+        phone: string;
+      }
+    ) => {
+      try {
+        const response = await api.post(`/api/auth/register/${token}`, data);
+
+        // Якщо бекенд повертає токен авторизації, зберігаємо його
+        if (response.data.token) {
+          localStorage.setItem("token", response.data.token);
+
+          // Якщо повертаються дані користувача, також зберігаємо їх
+          if (response.data.user) {
+            localStorage.setItem("user", JSON.stringify(response.data.user));
+          }
+        }
+
+        return response.data;
+      } catch (error) {
+        console.error("Register API error:", error);
+        throw error;
+      }
+    },
   },
 
   // Методи для роботи з запрошеннями
@@ -133,7 +161,6 @@ const apiService = {
       setAuthToken();
       try {
         const response = await api.get("/api/invitations", { params });
-        console.log("response list", response.data);
         return response.data as InvitationsListResponse;
       } catch (error) {
         console.error("Get invitations list API error:", error);

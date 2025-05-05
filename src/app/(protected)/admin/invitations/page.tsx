@@ -45,7 +45,6 @@ export default function AdminInvitationsPage() {
         used: invitation.used,
         createdInovation: invitation.createdAt,
       }));
-      console.log("fetch", fetchedInvitations);
       setInvitations(fetchedInvitations);
     } catch (err) {
       console.error("Error fetching invitations:", err);
