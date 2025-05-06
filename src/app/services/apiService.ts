@@ -72,11 +72,41 @@ interface InvitationsListResponse {
     limit: number;
   };
 }
+interface UpdateProfileData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
 
+interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
+interface UpdateAgentData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+interface LoginData {
+  email: string;
+  password: string;
+}
+
+// Інтерфейс для відповіді сервера
+interface LoginResponse {
+  token: string;
+  user?: {
+    email: string;
+    role: string;
+    [key: string]: any; // Для додаткових полів
+  };
+  role?: string;
+}
 // Функції для роботи з API
 const apiService = {
   auth: {
-    login: async (data) => {
+    login: async (data: LoginData): Promise<LoginResponse> => {
       try {
         // Використовуємо точний URL з Postman
         const response = await api.post("/api/auth/login", data);
@@ -177,6 +207,112 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error("Cancel invitation API error:", error);
+        throw error;
+      }
+    },
+  },
+  profile: {
+    // Отримання профілю користувача
+    getProfile: async () => {
+      setAuthToken();
+      try {
+        const response = await api.get("/api/profile");
+        return response.data;
+      } catch (error) {
+        console.error("Get profile API error:", error);
+        throw error;
+      }
+    },
+
+    // Оновлення профілю користувача
+    updateProfile: async (data: UpdateProfileData) => {
+      setAuthToken();
+      try {
+        const response = await api.put("/api/profile", data);
+
+        // Оновлюємо інформацію про користувача в локальному сховищі
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser);
+            const updatedUser = { ...user, ...data };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+          } catch (parseError) {
+            console.error("Error updating local user data:", parseError);
+          }
+        }
+
+        return response.data;
+      } catch (error) {
+        console.error("Update profile API error:", error);
+        throw error;
+      }
+    },
+
+    // Зміна пароля
+    changePassword: async (data: ChangePasswordData) => {
+      setAuthToken();
+      try {
+        const response = await api.put("/api/profile/change-password", data);
+        return response.data;
+      } catch (error) {
+        console.error("Change password API error:", error);
+        throw error;
+      }
+    },
+  },
+  agents: {
+    // Отримання списку агентів
+    getList: async (
+      params: { page?: number; limit?: number; search?: string } = {}
+    ) => {
+      setAuthToken();
+      try {
+        const response = await api.get("/api/agents", { params });
+        return response.data;
+      } catch (error) {
+        console.error("Get agents list API error:", error);
+        throw error;
+      }
+    },
+
+    // Отримання конкретного агента за ID
+    getById: async (agentId: string) => {
+      setAuthToken();
+      try {
+        const response = await api.get(`/api/agents/${agentId}`);
+        return response.data;
+      } catch (error) {
+        console.error("Get agent by ID API error:", error);
+        throw error;
+      }
+    },
+
+    // Оновлення даних агента
+    update: async (agentId: string, data: UpdateAgentData) => {
+      setAuthToken();
+      try {
+        const response = await api.put(`/api/agents/${agentId}`, data);
+        return response.data;
+      } catch (error) {
+        console.error("Update agent API error:", error);
+        throw error;
+      }
+    },
+
+    // Зміна статусу активності агента
+    toggleStatus: async (agentId: string, isActive: boolean) => {
+      setAuthToken();
+      try {
+        const response = await api.patch(
+          `/api/agents/${agentId}/toggle-status`,
+          {
+            isActive,
+          }
+        );
+        return response.data;
+      } catch (error) {
+        console.error("Toggle agent status API error:", error);
         throw error;
       }
     },
