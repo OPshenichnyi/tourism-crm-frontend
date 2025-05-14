@@ -72,6 +72,62 @@ interface InvitationsListResponse {
     limit: number;
   };
 }
+// Типи для роботи з замовленнями
+interface Order {
+  id: string;
+  checkIn: string;
+  checkOut: string;
+  propertyName: string;
+  location: string;
+  country: string;
+  reservationCode: string;
+  reservationLink: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  adults: number;
+  children: number;
+  totalPrice: number;
+  cashOnCheckIn: boolean;
+  damageDeposit: boolean;
+  status: "draft" | "confirmed" | "paid";
+  paymentMethod: string;
+  paymentStatus: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface OrdersListResponse {
+  orders: Order[];
+  meta: {
+    page: number;
+    totalPages: number;
+    limit: number;
+  };
+}
+
+interface CreateOrderData {
+  checkIn: string;
+  checkOut: string;
+  propertyName: string;
+  location: string;
+  country: string;
+  reservationCode: string;
+  reservationLink?: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  adults: number;
+  children?: number;
+  totalPrice: number;
+  cashOnCheckIn?: boolean;
+  damageDeposit?: boolean;
+  status?: "draft" | "confirmed" | "paid";
+  paymentMethod?: string;
+  paymentStatus?: string;
+}
+interface UpdateOrderData extends Partial<CreateOrderData> {}
+
 interface UpdateProfileData {
   firstName: string;
   lastName: string;
@@ -91,6 +147,35 @@ interface UpdateAgentData {
 interface LoginData {
   email: string;
   password: string;
+}
+// User interfaces
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  isActive: boolean;
+  phone: string;
+  createdAt: string;
+}
+
+interface UsersListResponse {
+  users: User[];
+
+  page: number;
+  totalPages: number;
+  limit: number;
+  total: number;
+}
+
+interface UserStatusUpdateResponse {
+  message: string;
+  user: User;
+}
+
+interface UserDetailsResponse {
+  user: User;
 }
 
 // Інтерфейс для відповіді сервера
@@ -313,6 +398,127 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error("Toggle agent status API error:", error);
+        throw error;
+      }
+    },
+  },
+  // Add this inside apiService object
+  users: {
+    // Get list of all users with optional filtering
+    getList: async (
+      params: {
+        role?: string;
+        search?: string;
+        page?: number;
+        limit?: number;
+      } = {}
+    ): Promise<UsersListResponse> => {
+      setAuthToken();
+      try {
+        const response = await api.get("/api/users", { params });
+        return response.data;
+      } catch (error) {
+        console.error("Get users list API error:", error);
+        throw error;
+      }
+    },
+
+    // Toggle user active status
+    toggleStatus: async (
+      userId: string,
+      data: { isActive: boolean }
+    ): Promise<UserStatusUpdateResponse> => {
+      setAuthToken();
+      try {
+        const response = await api.patch(
+          `/api/users/${userId}/toggle-status`,
+          data
+        );
+        return response.data;
+      } catch (error) {
+        console.error("Toggle user status API error:", error);
+        throw error;
+      }
+    },
+
+    // Get user details
+    getDetails: async (userId: string): Promise<UserDetailsResponse> => {
+      setAuthToken();
+      try {
+        const response = await api.get(`/api/users/${userId}`);
+        return response.data;
+      } catch (error) {
+        console.error("Get user details API error:", error);
+        throw error;
+      }
+    },
+  },
+
+  // Методи для роботи з замовленнями
+  orders: {
+    // Отримання списку замовлень (GET /orders)
+    getList: async (
+      params: {
+        page?: number;
+        limit?: number;
+        status?: string;
+        search?: string;
+      } = {}
+    ) => {
+      setAuthToken();
+      try {
+        const response = await api.get("/api/orders", { params });
+        return response.data as OrdersListResponse;
+      } catch (error) {
+        console.error("Get orders list API error:", error);
+        throw error;
+      }
+    },
+
+    // Отримання деталей замовлення (GET /orders/{id})
+    getById: async (orderId: string) => {
+      setAuthToken();
+      try {
+        const response = await api.get(`/api/orders/${orderId}`);
+        return response.data;
+      } catch (error) {
+        console.error("Get order details API error:", error);
+        throw error;
+      }
+    },
+
+    // Створення нового замовлення (POST /orders)
+    create: async (data: CreateOrderData) => {
+      setAuthToken();
+      try {
+        const response = await api.post("/api/orders", data);
+        return response.data;
+      } catch (error) {
+        console.error("Create order API error:", error);
+        throw error;
+      }
+    },
+
+    // Оновлення замовлення (PUT /orders/{id})
+    update: async (orderId: string, data: UpdateOrderData) => {
+      setAuthToken();
+      try {
+        const response = await api.put(`/api/orders/${orderId}`, data);
+        return response.data;
+      } catch (error) {
+        console.error("Update order API error:", error);
+        throw error;
+      }
+    },
+
+    // Видалення замовлення (DELETE /orders/{id})
+    delete: async (orderId: string) => {
+      setAuthToken();
+      try {
+        const response = await api.delete(`/api/orders/${orderId}`);
+        return response.data;
+      } catch (error) {
+        console.error("Delete order API error:", error);
         throw error;
       }
     },
