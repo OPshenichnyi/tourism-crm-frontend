@@ -1,268 +1,855 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/app/components/common/DashboardLayout";
 import apiService from "@/app/services/apiService";
 
+// Payment method type
+type PaymentMethod = "cash" | "bank" | "revolut";
+// Payment status type
+type PaymentStatus = "paid" | "unpaid";
+
+// Child interface
+interface Child {
+  age: number;
+}
+
+// Interface for form data
 interface OrderFormData {
-  propertyName: string;
-  location: string;
-  country: string;
-  reservationCode: string;
-  reservationLink: string;
+  // Agent information
+  agentName: string;
+  agentCountry: string;
+
+  // Travel information
   checkIn: string;
   checkOut: string;
+  nights: number;
+  locationTravel: string;
+  reservationNumber: number | null;
+
+  // Client information
   clientName: string;
+  clientPhone: string[];
   clientEmail: string;
-  clientPhone: string;
-  adults: number;
-  children: number;
-  totalPrice: number;
-  cashOnCheckIn: boolean;
-  damageDeposit: boolean;
-  status: "draft" | "confirmed" | "paid";
-  paymentMethod: string;
-  paymentStatus: string;
+
+  // Guests information
+  guests: {
+    adults: number;
+    children: Child[];
+  };
+
+  // Price information
+  officialPrice: number | null;
+  taxClean: number | null;
+  totalPrice: number | null;
+  bankAccount: string;
+
+  // Payment information
+  payments: {
+    deposit: {
+      status: PaymentStatus;
+      amount: number | null;
+      paymentMethods: PaymentMethod[];
+    };
+    balance: {
+      status: PaymentStatus;
+      amount: number | null;
+      paymentMethods: PaymentMethod[];
+    };
+  };
 }
 
 export default function CreateOrderPage() {
-  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
   const [formData, setFormData] = useState<OrderFormData>({
-    propertyName: "",
-    location: "",
-    country: "",
-    reservationCode: "",
-    reservationLink: "",
+    agentName: "",
+    agentCountry: "",
     checkIn: "",
     checkOut: "",
+    nights: 0,
+    locationTravel: "",
+    reservationNumber: null,
     clientName: "",
+    clientPhone: [""],
     clientEmail: "",
-    clientPhone: "",
-    adults: 1,
-    children: 0,
-    totalPrice: 0,
-    cashOnCheckIn: false,
-    damageDeposit: false,
-    status: "draft",
-    paymentMethod: "",
-    paymentStatus: "",
+    guests: {
+      adults: 1,
+      children: [],
+    },
+    officialPrice: null,
+    taxClean: null,
+    totalPrice: null,
+    bankAccount: "",
+    payments: {
+      deposit: {
+        status: "unpaid",
+        amount: null,
+        paymentMethods: [],
+      },
+      balance: {
+        status: "unpaid",
+        amount: null,
+        paymentMethods: [],
+      },
+    },
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Handle form input changes
-  const handleChange = (
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const router = useRouter();
+
+  // Get user data on component mount
+  useEffect(() => {
+    const userJson = localStorage.getItem("user");
+    if (userJson) {
+      try {
+        const userData = JSON.parse(userJson);
+        setUser(userData);
+
+        // Prefill agent name if available
+        if (userData.firstName && userData.lastName) {
+          setFormData((prev) => ({
+            ...prev,
+            agentName: `${userData.firstName} ${userData.lastName}`,
+          }));
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
+
+  // Calculate nights when check-in or check-out dates change
+  useEffect(() => {
+    if (formData.checkIn && formData.checkOut) {
+      const checkInDate = new Date(formData.checkIn);
+      const checkOutDate = new Date(formData.checkOut);
+
+      if (checkInDate && checkOutDate && checkOutDate >= checkInDate) {
+        // Calculate the difference in milliseconds
+        const diffTime = checkOutDate.getTime() - checkInDate.getTime();
+        // Convert to days
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        setFormData((prev) => ({
+          ...prev,
+          nights: diffDays,
+        }));
+      }
+    }
+  }, [formData.checkIn, formData.checkOut]);
+
+  // Calculate total price when official price or tax changes
+  useEffect(() => {
+    const officialPrice = formData.officialPrice || 0;
+    const taxClean = formData.taxClean || 0;
+
+    setFormData((prev) => ({
+      ...prev,
+      totalPrice: officialPrice + taxClean,
+    }));
+  }, [formData.officialPrice, formData.taxClean]);
+
+  // Handle input change for simple fields
+  const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
 
-    if (type === "checkbox") {
-      const checkbox = e.target as HTMLInputElement;
+    // Clear errors for the current field
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+
+    // Handle nested properties
+    if (name.includes(".")) {
+      const [parent, child] = name.split(".");
       setFormData((prev) => ({
         ...prev,
-        [name]: checkbox.checked,
-      }));
-    } else if (type === "number") {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value === "" ? "" : parseInt(value) || 0,
+        [parent]: {
+          ...prev[parent as keyof OrderFormData],
+          [child]: value,
+        },
       }));
     } else {
+      // Convert to number if the field expects a number
+      const numberFields = [
+        "reservationNumber",
+        "nights",
+        "officialPrice",
+        "taxClean",
+        "totalPrice",
+      ];
+
+      if (numberFields.includes(name) && value) {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: parseFloat(value),
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
+    }
+  };
+
+  // Handle change for guests.adults
+  const handleAdultsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value) && value >= 1) {
       setFormData((prev) => ({
         ...prev,
-        [name]: value,
+        guests: {
+          ...prev.guests,
+          adults: value,
+        },
       }));
     }
+  };
+
+  // Handle phone number changes
+  const handlePhoneChange = (index: number, value: string) => {
+    const newPhones = [...formData.clientPhone];
+    newPhones[index] = value;
+
+    setFormData((prev) => ({
+      ...prev,
+      clientPhone: newPhones,
+    }));
+  };
+
+  // Add new phone field
+  const addPhoneField = () => {
+    setFormData((prev) => ({
+      ...prev,
+      clientPhone: [...prev.clientPhone, ""],
+    }));
+  };
+
+  // Remove phone field
+  const removePhoneField = (index: number) => {
+    if (formData.clientPhone.length > 1) {
+      const newPhones = [...formData.clientPhone];
+      newPhones.splice(index, 1);
+
+      setFormData((prev) => ({
+        ...prev,
+        clientPhone: newPhones,
+      }));
+    }
+  };
+
+  // Handle child age change
+  const handleChildAgeChange = (index: number, age: number) => {
+    const newChildren = [...formData.guests.children];
+    newChildren[index] = { age };
+
+    setFormData((prev) => ({
+      ...prev,
+      guests: {
+        ...prev.guests,
+        children: newChildren,
+      },
+    }));
+  };
+
+  // Add child
+  const addChild = () => {
+    setFormData((prev) => ({
+      ...prev,
+      guests: {
+        ...prev.guests,
+        children: [...prev.guests.children, { age: 0 }],
+      },
+    }));
+  };
+
+  // Remove child
+  const removeChild = (index: number) => {
+    const newChildren = [...formData.guests.children];
+    newChildren.splice(index, 1);
+
+    setFormData((prev) => ({
+      ...prev,
+      guests: {
+        ...prev.guests,
+        children: newChildren,
+      },
+    }));
+  };
+
+  // Handle payment method toggle
+  const togglePaymentMethod = (
+    paymentType: "deposit" | "balance",
+    method: PaymentMethod
+  ) => {
+    const currentMethods = formData.payments[paymentType].paymentMethods;
+    let newMethods: PaymentMethod[];
+
+    if (currentMethods.includes(method)) {
+      // Remove method if already selected
+      newMethods = currentMethods.filter((m) => m !== method);
+    } else {
+      // Add method if not selected
+      newMethods = [...currentMethods, method];
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      payments: {
+        ...prev.payments,
+        [paymentType]: {
+          ...prev.payments[paymentType],
+          paymentMethods: newMethods,
+        },
+      },
+    }));
+  };
+
+  // Handle payment status change
+  const handlePaymentStatusChange = (
+    paymentType: "deposit" | "balance",
+    status: PaymentStatus
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      payments: {
+        ...prev.payments,
+        [paymentType]: {
+          ...prev.payments[paymentType],
+          status,
+        },
+      },
+    }));
+  };
+
+  // Handle payment amount change
+  const handlePaymentAmountChange = (
+    paymentType: "deposit" | "balance",
+    amount: string
+  ) => {
+    const numericAmount = parseFloat(amount);
+
+    setFormData((prev) => ({
+      ...prev,
+      payments: {
+        ...prev.payments,
+        [paymentType]: {
+          ...prev.payments[paymentType],
+          amount: isNaN(numericAmount) ? null : numericAmount,
+        },
+      },
+    }));
+  };
+
+  // Validate form
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Validate agent information
+    if (!formData.agentName.trim()) {
+      newErrors.agentName = "Agent name is required";
+    }
+
+    // Validate travel information
+    if (!formData.checkIn) {
+      newErrors.checkIn = "Check-in date is required";
+    }
+    if (!formData.checkOut) {
+      newErrors.checkOut = "Check-out date is required";
+    }
+    if (formData.checkIn && formData.checkOut) {
+      const checkInDate = new Date(formData.checkIn);
+      const checkOutDate = new Date(formData.checkOut);
+      if (checkOutDate < checkInDate) {
+        newErrors.checkOut = "Check-out date must be after check-in date";
+      }
+    }
+    if (!formData.locationTravel.trim()) {
+      newErrors.locationTravel = "Travel location is required";
+    }
+
+    // Validate client information
+    if (!formData.clientName.trim()) {
+      newErrors.clientName = "Client name is required";
+    }
+    if (formData.clientPhone.length === 0 || !formData.clientPhone[0].trim()) {
+      newErrors.clientPhone = "At least one phone number is required";
+    }
+    if (!formData.clientEmail.trim()) {
+      newErrors.clientEmail = "Client email is required";
+    } else {
+      // Email validation regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.clientEmail)) {
+        newErrors.clientEmail = "Please enter a valid email address";
+      }
+    }
+
+    // Validate price information
+    if (formData.officialPrice === null || formData.officialPrice < 0) {
+      newErrors.officialPrice =
+        "Official price is required and must be a positive number";
+    }
+
+    // Set errors and return validation result
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate form
+    if (!validateForm()) {
+      // Scroll to the first error
+      const firstErrorField = document.querySelector(
+        `[name="${Object.keys(errors)[0]}"]`
+      );
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+
     setIsSubmitting(true);
-    setError(null);
-    setSuccessMessage(null);
+    setSubmitError(null);
 
     try {
-      console.log("test Form data", formData);
-      const response = await apiService.orders.create(formData);
-      setSuccessMessage("Order created successfully");
+      // Format the data according to API requirements
+      const requestData = {
+        ...formData,
+        payments: {
+          deposit: {
+            ...formData.payments.deposit,
+            payment_methods: formData.payments.deposit.paymentMethods,
+          },
+          balance: {
+            ...formData.payments.balance,
+            payment_methods: formData.payments.balance.paymentMethods,
+          },
+        },
+      };
 
-      // Redirect to the new order page after successful creation
+      // Call the API
+      const response = await apiService.orders.create(requestData);
+
+      // Handle successful response
+      setSubmitSuccess(true);
+
+      // Redirect after a short delay
       setTimeout(() => {
-        router.push(`/agent/orders/${response.order.id}`);
-      }, 1500);
-    } catch (err) {
-      console.error("Error creating order:", err);
-      setError(
-        "Failed to create order. Please check your information and try again."
-      );
+        router.push("/agent/orders");
+      }, 2000);
+    } catch (error) {
+      console.error("Error creating order:", error);
+
+      // Handle different error types
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        if (error.response.status === 422) {
+          // Validation errors from the server
+          const serverErrors = error.response.data.errors;
+          const formattedErrors: Record<string, string> = {};
+
+          // Format server errors to match our local error structure
+          Object.entries(serverErrors).forEach(
+            ([key, messages]: [string, any]) => {
+              formattedErrors[key] = Array.isArray(messages)
+                ? messages[0]
+                : messages;
+            }
+          );
+
+          setErrors(formattedErrors);
+        } else if (
+          error.response.status === 401 ||
+          error.response.status === 403
+        ) {
+          // Authentication or authorization error
+          setSubmitError(
+            "You don't have permission to create orders. Please log in again."
+          );
+
+          // Redirect to login after a short delay
+          setTimeout(() => {
+            router.push("/");
+          }, 3000);
+        } else {
+          // Other server errors
+          setSubmitError(
+            `Server error: ${
+              error.response.data.message || "Something went wrong"
+            }`
+          );
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        setSubmitError(
+          "No response from server. Please check your internet connection and try again."
+        );
+      } else {
+        // Something happened in setting up the request that triggered an error
+        setSubmitError(`Error: ${error.message}`);
+      }
+    } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Toggle preview mode
+  const togglePreview = () => {
+    if (!showPreview) {
+      // Validate before showing preview
+      if (validateForm()) {
+        setShowPreview(true);
+      } else {
+        // Scroll to the first error
+        const firstErrorField = document.querySelector(
+          `[name="${Object.keys(errors)[0]}"]`
+        );
+        if (firstErrorField) {
+          firstErrorField.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }
+    } else {
+      setShowPreview(false);
+    }
+  };
+
+  // Determine if user can edit payment statuses (admin or manager)
+  const canEditPaymentStatus =
+    user && (user.role === "admin" || user.role === "manager");
+
+  // Format date for display in preview
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("uk-UA", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   return (
-    <DashboardLayout role="agent">
-      <div className="mb-6 flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Create New Order</h1>
-          <p className="text-gray-600">Add details for a new client order</p>
-        </div>
-        <div>
-          <button
-            onClick={() => router.push("/agent/orders")}
-            className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
-          >
-            Cancel
-          </button>
-        </div>
+    <DashboardLayout role={user?.role || "agent"}>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">
+          {showPreview ? "Preview Order" : "Create New Order"}
+        </h1>
+        <p className="text-gray-600">
+          {showPreview
+            ? "Review your order details before submitting"
+            : "Fill in the details to create a new travel order"}
+        </p>
       </div>
 
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
+      {submitSuccess ? (
+        <div className="bg-green-50 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+          <p className="font-medium">Order created successfully!</p>
+          <p>You will be redirected to the orders list...</p>
         </div>
-      )}
+      ) : null}
 
-      {successMessage && (
-        <div className="mb-6 bg-green-50 border border-green-400 text-green-700 px-4 py-3 rounded">
-          {successMessage}
+      {submitError ? (
+        <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <p className="font-medium">Error</p>
+          <p>{submitError}</p>
         </div>
-      )}
+      ) : null}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800">Order Details</h2>
+      {showPreview ? (
+        // Order Preview
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
+                Agent Information
+              </h2>
+              <p>
+                <span className="font-medium">Agent Name:</span>{" "}
+                {formData.agentName}
+              </p>
+              <p>
+                <span className="font-medium">Country:</span>{" "}
+                {formData.agentCountry}
+              </p>
+
+              <h2 className="text-lg font-semibold text-gray-800 mt-6 mb-4 border-b pb-2">
+                Travel Information
+              </h2>
+              <p>
+                <span className="font-medium">Check-in Date:</span>{" "}
+                {formatDate(formData.checkIn)}
+              </p>
+              <p>
+                <span className="font-medium">Check-out Date:</span>{" "}
+                {formatDate(formData.checkOut)}
+              </p>
+              <p>
+                <span className="font-medium">Nights:</span> {formData.nights}
+              </p>
+              <p>
+                <span className="font-medium">Location:</span>{" "}
+                {formData.locationTravel}
+              </p>
+              <p>
+                <span className="font-medium">Reservation Number:</span>{" "}
+                {formData.reservationNumber || "Not specified"}
+              </p>
+
+              <h2 className="text-lg font-semibold text-gray-800 mt-6 mb-4 border-b pb-2">
+                Client Information
+              </h2>
+              <p>
+                <span className="font-medium">Name:</span> {formData.clientName}
+              </p>
+              <p>
+                <span className="font-medium">Email:</span>{" "}
+                {formData.clientEmail}
+              </p>
+              <div>
+                <span className="font-medium">Phone Numbers:</span>
+                <ul className="list-disc ml-5 mt-1">
+                  {formData.clientPhone.map((phone, index) => (
+                    <li key={index}>{phone}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
+                Guests Information
+              </h2>
+              <p>
+                <span className="font-medium">Adults:</span>{" "}
+                {formData.guests.adults}
+              </p>
+              {formData.guests.children.length > 0 && (
+                <div>
+                  <span className="font-medium">Children:</span>
+                  <ul className="list-disc ml-5 mt-1">
+                    {formData.guests.children.map((child, index) => (
+                      <li key={index}>Age: {child.age}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <h2 className="text-lg font-semibold text-gray-800 mt-6 mb-4 border-b pb-2">
+                Price Information
+              </h2>
+              <p>
+                <span className="font-medium">Official Price:</span> $
+                {formData.officialPrice}
+              </p>
+              <p>
+                <span className="font-medium">Tax/Cleaning:</span> $
+                {formData.taxClean}
+              </p>
+              <p>
+                <span className="font-medium">Total Price:</span> $
+                {formData.totalPrice}
+              </p>
+              <p>
+                <span className="font-medium">Bank Account:</span>{" "}
+                {formData.bankAccount}
+              </p>
+
+              <h2 className="text-lg font-semibold text-gray-800 mt-6 mb-4 border-b pb-2">
+                Payment Information
+              </h2>
+              <div className="mb-4">
+                <h3 className="font-medium">Deposit:</h3>
+                <p>
+                  Status:{" "}
+                  <span
+                    className={
+                      formData.payments.deposit.status === "paid"
+                        ? "text-green-600"
+                        : "text-yellow-600"
+                    }
+                  >
+                    {formData.payments.deposit.status === "paid"
+                      ? "Paid"
+                      : "Not paid"}
+                  </span>
+                </p>
+                <p>Amount: ${formData.payments.deposit.amount}</p>
+                {formData.payments.deposit.paymentMethods.length > 0 && (
+                  <p>
+                    Methods:{" "}
+                    {formData.payments.deposit.paymentMethods.join(", ")}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="font-medium">Balance:</h3>
+                <p>
+                  Status:{" "}
+                  <span
+                    className={
+                      formData.payments.balance.status === "paid"
+                        ? "text-green-600"
+                        : "text-yellow-600"
+                    }
+                  >
+                    {formData.payments.balance.status === "paid"
+                      ? "Paid"
+                      : "Not paid"}
+                  </span>
+                </p>
+                <p>Amount: ${formData.payments.balance.amount}</p>
+                {formData.payments.balance.paymentMethods.length > 0 && (
+                  <p>
+                    Methods:{" "}
+                    {formData.payments.balance.paymentMethods.join(", ")}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={togglePreview}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Back to Edit
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Submitting...
+                </>
+              ) : (
+                "Confirm & Create Order"
+              )}
+            </button>
+          </div>
         </div>
+      ) : (
+        // Order Form
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Agent Information Section */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Agent Information
+            </h2>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          {/* Property Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-700 mb-4">
-              Property Information
-            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
-                  htmlFor="propertyName"
+                  htmlFor="agentName"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Property Name*
+                  Agent Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  id="propertyName"
-                  name="propertyName"
-                  value={formData.propertyName}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. Luxury Villa Sunset"
+                  id="agentName"
+                  name="agentName"
+                  value={formData.agentName}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.agentName ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
                 />
+                {errors.agentName && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.agentName}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label
-                  htmlFor="location"
+                  htmlFor="agentCountry"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Location*
+                  Country
                 </label>
                 <input
                   type="text"
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  required
+                  id="agentCountry"
+                  name="agentCountry"
+                  value={formData.agentCountry}
+                  onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. Santorini"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="country"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Country*
-                </label>
-                <input
-                  type="text"
-                  id="country"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. Greece"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="reservationCode"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Reservation Code*
-                </label>
-                <input
-                  type="text"
-                  id="reservationCode"
-                  name="reservationCode"
-                  value={formData.reservationCode}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. BKG12345"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="reservationLink"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Reservation Link
-                </label>
-                <input
-                  type="url"
-                  id="reservationLink"
-                  name="reservationLink"
-                  value={formData.reservationLink}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="https://booking-site.com/reservation/12345"
                 />
               </div>
             </div>
           </div>
 
-          {/* Stay Details */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-700 mb-4">
-              Stay Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Travel Information Section */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Travel Information
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="checkIn"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Check-in Date*
+                  Check-in Date <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   id="checkIn"
                   name="checkIn"
                   value={formData.checkIn}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.checkIn ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
                 />
+                {errors.checkIn && (
+                  <p className="mt-1 text-sm text-red-600">{errors.checkIn}</p>
+                )}
               </div>
 
               <div>
@@ -270,128 +857,115 @@ export default function CreateOrderPage() {
                   htmlFor="checkOut"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Check-out Date*
+                  Check-out Date <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   id="checkOut"
                   name="checkOut"
                   value={formData.checkOut}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.checkOut ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
                 />
+                {errors.checkOut && (
+                  <p className="mt-1 text-sm text-red-600">{errors.checkOut}</p>
+                )}
               </div>
 
               <div>
                 <label
-                  htmlFor="totalPrice"
+                  htmlFor="nights"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Total Price*
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500">$</span>
-                  </div>
-                  <input
-                    type="number"
-                    id="totalPrice"
-                    name="totalPrice"
-                    value={formData.totalPrice}
-                    onChange={handleChange}
-                    required
-                    min="0"
-                    step="0.01"
-                    className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="adults"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Adults*
+                  Nights
                 </label>
                 <input
                   type="number"
-                  id="adults"
-                  name="adults"
-                  value={formData.adults}
-                  onChange={handleChange}
-                  required
-                  min="1"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  id="nights"
+                  name="nights"
+                  value={formData.nights || ""}
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Automatically calculated from dates
+                </p>
               </div>
 
               <div>
                 <label
-                  htmlFor="children"
+                  htmlFor="locationTravel"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Children
+                  Travel Location <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="locationTravel"
+                  name="locationTravel"
+                  value={formData.locationTravel}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.locationTravel ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {errors.locationTravel && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.locationTravel}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="reservationNumber"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Reservation Number
                 </label>
                 <input
                   type="number"
-                  id="children"
-                  name="children"
-                  value={formData.children}
-                  onChange={handleChange}
-                  min="0"
+                  id="reservationNumber"
+                  name="reservationNumber"
+                  value={formData.reservationNumber || ""}
+                  onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="status"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Status*
-                </label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="paid">Paid</option>
-                </select>
               </div>
             </div>
           </div>
 
-          {/* Client Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-700 mb-4">
+          {/* Client Information Section */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
               Client Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            </h2>
+
+            <div className="space-y-4">
               <div>
                 <label
                   htmlFor="clientName"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Client Name*
+                  Client Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   id="clientName"
                   name="clientName"
                   value={formData.clientName}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. John Smith"
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.clientName ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
                 />
+                {errors.clientName && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.clientName}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -399,150 +973,592 @@ export default function CreateOrderPage() {
                   htmlFor="clientEmail"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Client Email*
+                  Client Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
                   id="clientEmail"
                   name="clientEmail"
                   value={formData.clientEmail}
-                  onChange={handleChange}
-                  required
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.clientEmail ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {errors.clientEmail && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.clientEmail}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Phone Numbers <span className="text-red-500">*</span>
+                </label>
+                {errors.clientPhone && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.clientPhone}
+                  </p>
+                )}
+
+                {formData.clientPhone.map((phone, index) => (
+                  <div key={index} className="flex space-x-2 mb-2">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(index, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="+380123456789"
+                    />
+                    {index === 0 ? (
+                      <button
+                        type="button"
+                        onClick={addPhoneField}
+                        className="px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 hover:bg-gray-100"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 text-gray-600"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => removePhoneField(index)}
+                        className="px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 hover:bg-gray-100"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 text-gray-600"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Guests Information Section */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Guests Information
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="adults"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Number of Adults <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="adults"
+                  name="adults"
+                  min="1"
+                  value={formData.guests.adults}
+                  onChange={handleAdultsChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. client@example.com"
                 />
               </div>
 
               <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Children
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addChild}
+                    className="inline-flex items-center px-2 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 mr-1"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Add Child
+                  </button>
+                </div>
+
+                {formData.guests.children.length === 0 ? (
+                  <p className="text-sm text-gray-500">No children added</p>
+                ) : (
+                  <div className="space-y-2">
+                    {formData.guests.children.map((child, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Child {index + 1} - Age
+                          </label>
+                          <div className="flex space-x-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max="17"
+                              value={child.age}
+                              onChange={(e) =>
+                                handleChildAgeChange(
+                                  index,
+                                  parseInt(e.target.value)
+                                )
+                              }
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeChild(index)}
+                              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 hover:bg-gray-100"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 text-gray-600"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Price Information Section */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Price Information
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
                 <label
-                  htmlFor="clientPhone"
+                  htmlFor="officialPrice"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Client Phone*
+                  Official Price <span className="text-red-500">*</span>
+                </label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    id="officialPrice"
+                    name="officialPrice"
+                    min="0"
+                    step="0.01"
+                    value={formData.officialPrice || ""}
+                    onChange={handleInputChange}
+                    className={`flex-1 px-3 py-2 border ${
+                      errors.officialPrice
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    } rounded-r-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                  />
+                </div>
+                {errors.officialPrice && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.officialPrice}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="taxClean"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Tax/Cleaning Fee
+                </label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    id="taxClean"
+                    name="taxClean"
+                    min="0"
+                    step="0.01"
+                    value={formData.taxClean || ""}
+                    onChange={handleInputChange}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="totalPrice"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Total Price
+                </label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    id="totalPrice"
+                    name="totalPrice"
+                    value={formData.totalPrice || ""}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md shadow-sm bg-gray-50"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Automatically calculated
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="bankAccount"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Bank Account
                 </label>
                 <input
-                  type="tel"
-                  id="clientPhone"
-                  name="clientPhone"
-                  value={formData.clientPhone}
-                  onChange={handleChange}
-                  required
+                  type="text"
+                  id="bankAccount"
+                  name="bankAccount"
+                  value={formData.bankAccount}
+                  onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. +1 234 567 8901"
+                  placeholder="e.g. PL61109010140000071219812874"
                 />
               </div>
             </div>
           </div>
 
-          {/* Payment Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-700 mb-4">
+          {/* Payment Information Section */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
               Payment Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="paymentMethod"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Payment Method
-                </label>
-                <select
-                  id="paymentMethod"
-                  name="paymentMethod"
-                  value={formData.paymentMethod}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select payment method</option>
-                  <option value="credit_card">Credit Card</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                  <option value="cash">Cash</option>
-                  <option value="paypal">PayPal</option>
-                </select>
+            </h2>
+
+            {/* Deposit Section */}
+            <div className="border-b border-gray-200 pb-4 mb-4">
+              <h3 className="text-md font-medium text-gray-700 mb-3">
+                Deposit
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                {canEditPaymentStatus && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          className="form-radio h-4 w-4 text-blue-600"
+                          name="depositStatus"
+                          checked={formData.payments.deposit.status === "paid"}
+                          onChange={() =>
+                            handlePaymentStatusChange("deposit", "paid")
+                          }
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Paid</span>
+                      </label>
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          className="form-radio h-4 w-4 text-blue-600"
+                          name="depositStatus"
+                          checked={
+                            formData.payments.deposit.status === "unpaid"
+                          }
+                          onChange={() =>
+                            handlePaymentStatusChange("deposit", "unpaid")
+                          }
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          Not Paid
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label
+                    htmlFor="depositAmount"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Amount
+                  </label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      id="depositAmount"
+                      min="0"
+                      step="0.01"
+                      value={formData.payments.deposit.amount || ""}
+                      onChange={(e) =>
+                        handlePaymentAmountChange("deposit", e.target.value)
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
-                <label
-                  htmlFor="paymentStatus"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Payment Status
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Methods
                 </label>
-                <select
-                  id="paymentStatus"
-                  name="paymentStatus"
-                  value={formData.paymentStatus}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select payment status</option>
-                  <option value="pending">Pending</option>
-                  <option value="processing">Processing</option>
-                  <option value="completed">Completed</option>
-                  <option value="failed">Failed</option>
-                  <option value="refunded">Refunded</option>
-                </select>
+                <div className="flex flex-wrap gap-3">
+                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
+                    <input
+                      type="checkbox"
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                      checked={formData.payments.deposit.paymentMethods.includes(
+                        "cash"
+                      )}
+                      onChange={() => togglePaymentMethod("deposit", "cash")}
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Cash</span>
+                  </label>
+                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
+                    <input
+                      type="checkbox"
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                      checked={formData.payments.deposit.paymentMethods.includes(
+                        "bank"
+                      )}
+                      onChange={() => togglePaymentMethod("deposit", "bank")}
+                    />
+                    <span className="ml-2 text-sm text-gray-700">
+                      Bank Transfer
+                    </span>
+                  </label>
+                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
+                    <input
+                      type="checkbox"
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                      checked={formData.payments.deposit.paymentMethods.includes(
+                        "revolut"
+                      )}
+                      onChange={() => togglePaymentMethod("deposit", "revolut")}
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Revolut</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Balance Section */}
+            <div>
+              <h3 className="text-md font-medium text-gray-700 mb-3">
+                Balance
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                {canEditPaymentStatus && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          className="form-radio h-4 w-4 text-blue-600"
+                          name="balanceStatus"
+                          checked={formData.payments.balance.status === "paid"}
+                          onChange={() =>
+                            handlePaymentStatusChange("balance", "paid")
+                          }
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Paid</span>
+                      </label>
+                      <label className="inline-flex items-center">
+                        <input
+                          type="radio"
+                          className="form-radio h-4 w-4 text-blue-600"
+                          name="balanceStatus"
+                          checked={
+                            formData.payments.balance.status === "unpaid"
+                          }
+                          onChange={() =>
+                            handlePaymentStatusChange("balance", "unpaid")
+                          }
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          Not Paid
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label
+                    htmlFor="balanceAmount"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Amount
+                  </label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      id="balanceAmount"
+                      min="0"
+                      step="0.01"
+                      value={formData.payments.balance.amount || ""}
+                      onChange={(e) =>
+                        handlePaymentAmountChange("balance", e.target.value)
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="md:col-span-2">
-                <div className="flex flex-col space-y-2">
-                  <div className="flex items-center">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Methods
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
                     <input
                       type="checkbox"
-                      id="cashOnCheckIn"
-                      name="cashOnCheckIn"
-                      checked={formData.cashOnCheckIn}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                      checked={formData.payments.balance.paymentMethods.includes(
+                        "cash"
+                      )}
+                      onChange={() => togglePaymentMethod("balance", "cash")}
                     />
-                    <label
-                      htmlFor="cashOnCheckIn"
-                      className="ml-2 text-sm text-gray-700"
-                    >
-                      Cash payment on check-in
-                    </label>
-                  </div>
-
-                  <div className="flex items-center">
+                    <span className="ml-2 text-sm text-gray-700">Cash</span>
+                  </label>
+                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
                     <input
                       type="checkbox"
-                      id="damageDeposit"
-                      name="damageDeposit"
-                      checked={formData.damageDeposit}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                      checked={formData.payments.balance.paymentMethods.includes(
+                        "bank"
+                      )}
+                      onChange={() => togglePaymentMethod("balance", "bank")}
                     />
-                    <label
-                      htmlFor="damageDeposit"
-                      className="ml-2 text-sm text-gray-700"
-                    >
-                      Damage deposit required
-                    </label>
-                  </div>
+                    <span className="ml-2 text-sm text-gray-700">
+                      Bank Transfer
+                    </span>
+                  </label>
+                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
+                    <input
+                      type="checkbox"
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                      checked={formData.payments.balance.paymentMethods.includes(
+                        "revolut"
+                      )}
+                      onChange={() => togglePaymentMethod("balance", "revolut")}
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Revolut</span>
+                  </label>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => router.push("/agent/orders")}
-              className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+              onClick={() => router.back()}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Cancel
             </button>
+
+            <button
+              type="button"
+              onClick={togglePreview}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Preview
+            </button>
+
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {isSubmitting ? "Creating..." : "Create Order"}
+              {isSubmitting ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Creating...
+                </>
+              ) : (
+                "Create Order"
+              )}
             </button>
           </div>
         </form>
-      </div>
+      )}
     </DashboardLayout>
   );
 }

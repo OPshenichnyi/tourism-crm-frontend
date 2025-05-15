@@ -97,36 +97,44 @@ interface Order {
   updatedAt: string;
 }
 
-interface OrdersListResponse {
-  orders: Order[];
-  meta: {
-    page: number;
-    totalPages: number;
-    limit: number;
-  };
+// This is an update to the existing src/app/services/apiService.ts file.
+// This content should be added to the existing file.
+
+// Інтерфейси для створення замовлення
+interface Child {
+  age: number;
 }
 
-interface CreateOrderData {
+interface OrderPayment {
+  status: "paid" | "unpaid";
+  amount: number | null;
+  payment_methods: ("cash" | "bank" | "revolut")[];
+}
+
+interface OrderFormData {
+  agentName: string;
+  agentCountry: string;
   checkIn: string;
   checkOut: string;
-  propertyName: string;
-  location: string;
-  country: string;
-  reservationCode: string;
-  reservationLink?: string;
+  nights: number;
+  locationTravel: string;
+  reservationNumber: number | null;
   clientName: string;
+  clientPhone: string[];
   clientEmail: string;
-  clientPhone: string;
-  adults: number;
-  children?: number;
-  totalPrice: number;
-  cashOnCheckIn?: boolean;
-  damageDeposit?: boolean;
-  status?: "draft" | "confirmed" | "paid";
-  paymentMethod?: string;
-  paymentStatus?: string;
+  guests: {
+    adults: number;
+    children: Child[];
+  };
+  officialPrice: number | null;
+  taxClean: number | null;
+  totalPrice: number | null;
+  bankAccount: string;
+  payments: {
+    deposit: OrderPayment;
+    balance: OrderPayment;
+  };
 }
-interface UpdateOrderData extends Partial<CreateOrderData> {}
 
 interface UpdateProfileData {
   firstName: string;
@@ -188,6 +196,81 @@ interface LoginResponse {
   };
   role?: string;
 }
+
+interface ExportParams {
+  orderIds?: string[];
+  status?: "approve" | "unpaid" | "paid";
+  search?: string;
+  agentId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  travelFrom?: string;
+  travelTo?: string;
+  minPrice?: number | undefined;
+  maxPrice?: number | undefined;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+interface Guest {
+  age: number;
+}
+
+interface Guests {
+  adults: number;
+  children: Guest[];
+}
+
+interface Payment {
+  status: "paid" | "unpaid";
+  amount: number;
+  payment_methods: ("cash" | "bank" | "revolut")[];
+}
+
+interface Payments {
+  deposit: Payment;
+  balance: Payment;
+}
+
+interface OrderDetails {
+  id: string;
+  agentId: string;
+  createdOrder: string;
+  agentName: string;
+  agentCountry: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  locationTravel: string;
+  reservationNumber: number;
+  clientName: string;
+  clientPhone: string[];
+  clientEmail: string;
+  guests: Guests;
+  officialPrice: number;
+  taxClean: number;
+  totalPrice: number;
+  bankAccount: string;
+  payments: Payments;
+  statusOrder: "approve" | "unpaid" | "paid";
+  createdAt: string;
+  updatedAt: string;
+  agent: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+  };
+}
+
+interface OrderResponse {
+  message: string;
+  order: OrderDetails;
+}
+
 // Функції для роботи з API
 const apiService = {
   auth: {
@@ -453,42 +536,9 @@ const apiService = {
       }
     },
   },
-
-  // Методи для роботи з замовленнями
   orders: {
-    // Отримання списку замовлень (GET /orders)
-    getList: async (
-      params: {
-        page?: number;
-        limit?: number;
-        status?: string;
-        search?: string;
-      } = {}
-    ) => {
-      setAuthToken();
-      try {
-        const response = await api.get("/api/orders", { params });
-        return response.data as OrdersListResponse;
-      } catch (error) {
-        console.error("Get orders list API error:", error);
-        throw error;
-      }
-    },
-
-    // Отримання деталей замовлення (GET /orders/{id})
-    getById: async (orderId: string) => {
-      setAuthToken();
-      try {
-        const response = await api.get(`/api/orders/${orderId}`);
-        return response.data;
-      } catch (error) {
-        console.error("Get order details API error:", error);
-        throw error;
-      }
-    },
-
     // Створення нового замовлення (POST /orders)
-    create: async (data: CreateOrderData) => {
+    create: async (data: OrderFormData) => {
       setAuthToken();
       try {
         const response = await api.post("/api/orders", data);
@@ -499,26 +549,110 @@ const apiService = {
       }
     },
 
-    // Оновлення замовлення (PUT /orders/{id})
-    update: async (orderId: string, data: UpdateOrderData) => {
+    // Отримання списку замовлень (GET /orders)
+    getList: async (
+      params: { page?: number; limit?: number; status?: string } = {}
+    ) => {
       setAuthToken();
       try {
-        const response = await api.put(`/api/orders/${orderId}`, data);
+        const response = await api.get("/api/orders", { params });
         return response.data;
       } catch (error) {
-        console.error("Update order API error:", error);
+        console.error("Get orders list API error:", error);
         throw error;
       }
     },
 
-    // Видалення замовлення (DELETE /orders/{id})
-    delete: async (orderId: string) => {
+    // Отримання замовлення за ID (GET /orders/{id})
+    getById: async (orderId: string): Promise<OrderResponse> => {
+      setAuthToken();
+      try {
+        const response = await api.get(`/api/orders/${orderId}`);
+        return response.data;
+      } catch (error) {
+        console.error(`Get order ${orderId} API error:`, error);
+        throw error;
+      }
+    },
+
+    // Оновлення замовлення (PUT /orders/{id})
+    update: async (
+      id: string,
+      orderData: Partial<OrderDetails>
+    ): Promise<OrderResponse> => {
+      setAuthToken();
+      try {
+        const response = await api.put(`/api/orders/${id}`, orderData);
+        return response.data;
+      } catch (error) {
+        console.error(`Update order ${id} API error:`, error);
+        throw error;
+      }
+    },
+
+    // Скасування замовлення (DELETE /orders/{id})
+    cancel: async (orderId: string) => {
       setAuthToken();
       try {
         const response = await api.delete(`/api/orders/${orderId}`);
         return response.data;
       } catch (error) {
-        console.error("Delete order API error:", error);
+        console.error(`Cancel order ${orderId} API error:`, error);
+        throw error;
+      }
+    },
+
+    // Get orders list for manager with enhanced filtering
+    getManagerList: async (params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      search?: string;
+      agentId?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      travelFrom?: string;
+      travelTo?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      sortBy?: string;
+      sortOrder?: "asc" | "desc";
+    }) => {
+      setAuthToken();
+      try {
+        const response = await api.get("/api/orders", { params });
+        return response.data;
+      } catch (error) {
+        console.error("Get manager orders list API error:", error);
+        throw error;
+      }
+    },
+
+    // Update order status
+    updateStatus: async (orderId: string, status: string) => {
+      setAuthToken();
+      try {
+        const response = await api.patch(`/api/orders/${orderId}/status`, {
+          status,
+        });
+        return response.data;
+      } catch (error) {
+        console.error("Update order status API error:", error);
+        throw error;
+      }
+    },
+
+    // Export orders to CSV for manager
+    exportManagerCSV: async (params: ExportParams) => {
+      setAuthToken();
+      try {
+        const response = await api.get("/api/orders/export", {
+          params,
+          responseType: "blob",
+        });
+        return response.data;
+      } catch (error) {
+        console.error("Export orders API error:", error);
         throw error;
       }
     },

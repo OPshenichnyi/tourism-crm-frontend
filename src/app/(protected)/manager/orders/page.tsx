@@ -7,8 +7,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import type { Dispatch, SetStateAction } from "react";
 
+// Types and Interfaces
 interface Guest {
   age: number;
 }
@@ -62,56 +62,64 @@ interface Order {
   agent: Agent;
 }
 
-// State interface for filters
-interface FilterState {
-  status: string;
-  search: string;
-  dateRange: {
-    start: string | null;
-    end: string | null;
-  };
-  travelDateRange: {
-    start: string | null;
-    end: string | null;
-  };
-  sortBy: string;
-  sortOrder: "asc" | "desc";
-  limit: number;
-}
-
-// Define type for filter change handler
-type FilterChangeHandler = (
-  filterName: keyof FilterState,
-  value: string | number | DateRange | TravelDateRange
-) => void;
-
-// Define date range types
 interface DateRange {
   start: string | null;
   end: string | null;
 }
 
-interface TravelDateRange {
-  start: string | null;
-  end: string | null;
+// Enhanced FilterState for manager
+interface FilterState {
+  status: string;
+  search: string;
+  agentId: string;
+  dateRange: DateRange;
+  travelDateRange: DateRange;
+  sortBy: string;
+  sortOrder: "asc" | "desc";
+  limit: number;
+  minPrice: number | null;
+  maxPrice: number | null;
 }
 
-export default function AgentOrdersPage() {
+type FilterChangeHandler = (
+  filterName: keyof FilterState,
+  value: string | number | DateRange | null
+) => void;
+
+interface ExportParams {
+  orderIds?: string[];
+  status?: "approve" | "unpaid" | "paid";
+  search?: string;
+  agentId?: string;
+  dateFrom?: string | undefined;
+  dateTo?: string | undefined;
+  travelFrom?: string | undefined;
+  travelTo?: string | undefined;
+  minPrice?: number | undefined;
+  maxPrice?: number | undefined;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export default function ManagerOrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Enhanced state management
+  // State
   const [orders, setOrders] = useState<Order[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
-  // Filter states
+  // Enhanced filters state for manager
   const [filters, setFilters] = useState<FilterState>({
     status: searchParams.get("status") || "",
     search: searchParams.get("search") || "",
+    agentId: searchParams.get("agentId") || "",
     dateRange: {
       start: searchParams.get("dateFrom") || null,
       end: searchParams.get("dateTo") || null,
@@ -123,29 +131,45 @@ export default function AgentOrdersPage() {
     sortBy: searchParams.get("sortBy") || "createdOrder",
     sortOrder: (searchParams.get("sortOrder") as "asc" | "desc") || "desc",
     limit: Number(searchParams.get("limit")) || 10,
+    minPrice: searchParams.get("minPrice")
+      ? Number(searchParams.get("minPrice"))
+      : null,
+    maxPrice: searchParams.get("maxPrice")
+      ? Number(searchParams.get("maxPrice"))
+      : null,
   });
 
-  // Function to update URL with current filters
+  // Fetch agents for filter
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const response = await apiService.agents.getList();
+        setAgents(response.agents);
+      } catch (err) {
+        console.error("Error fetching agents:", err);
+      }
+    };
+    fetchAgents();
+  }, []);
+
+  // Update URL with filters
   const updateUrlWithFilters = () => {
     const params = new URLSearchParams();
-    if (filters.status) params.set("status", filters.status);
-    if (filters.search) params.set("search", filters.search);
-    if (filters.dateRange.start)
-      params.set("dateFrom", filters.dateRange.start);
-    if (filters.dateRange.end) params.set("dateTo", filters.dateRange.end);
-    if (filters.travelDateRange.start)
-      params.set("travelFrom", filters.travelDateRange.start);
-    if (filters.travelDateRange.end)
-      params.set("travelTo", filters.travelDateRange.end);
-    params.set("sortBy", filters.sortBy);
-    params.set("sortOrder", filters.sortOrder);
-    params.set("limit", filters.limit.toString());
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        if (typeof value === "object") {
+          if (value.start) params.set(`${key}From`, value.start);
+          if (value.end) params.set(`${key}To`, value.end);
+        } else {
+          params.set(key, String(value));
+        }
+      }
+    });
     params.set("page", currentPage.toString());
-
     router.push(`?${params.toString()}`);
   };
 
-  // Function to fetch orders with enhanced filtering
+  // Fetch orders
   const fetchOrders = async () => {
     setIsLoading(true);
     setError(null);
@@ -158,16 +182,20 @@ export default function AgentOrdersPage() {
         sortOrder: filters.sortOrder,
       };
 
+      // Add all filters to params
       if (filters.status) params.status = filters.status;
       if (filters.search) params.search = filters.search;
+      if (filters.agentId) params.agentId = filters.agentId;
       if (filters.dateRange.start) params.dateFrom = filters.dateRange.start;
       if (filters.dateRange.end) params.dateTo = filters.dateRange.end;
       if (filters.travelDateRange.start)
         params.travelFrom = filters.travelDateRange.start;
       if (filters.travelDateRange.end)
         params.travelTo = filters.travelDateRange.end;
+      if (filters.minPrice) params.minPrice = filters.minPrice;
+      if (filters.maxPrice) params.maxPrice = filters.maxPrice;
 
-      const response = await apiService.orders.getList(params);
+      const response = await apiService.orders.getManagerList(params);
       setOrders(response.orders);
       setTotalPages(response.totalPages);
       setTotalRecords(response.total);
@@ -179,13 +207,13 @@ export default function AgentOrdersPage() {
     }
   };
 
-  // Effect to update URL and fetch orders when filters change
+  // Effect to update URL and fetch orders
   useEffect(() => {
     updateUrlWithFilters();
     fetchOrders();
   }, [currentPage, filters]);
 
-  // Handle filter changes with proper typing
+  // Handlers
   const handleFilterChange: FilterChangeHandler = (filterName, value) => {
     setFilters((prev) => ({
       ...prev,
@@ -194,7 +222,6 @@ export default function AgentOrdersPage() {
     setCurrentPage(1);
   };
 
-  // Handle sort change
   const handleSortChange = (sortField: string) => {
     setFilters((prev) => ({
       ...prev,
@@ -204,16 +231,6 @@ export default function AgentOrdersPage() {
     }));
   };
 
-  // Format date helper function
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("uk-UA", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  // Handle page size change
   const handlePageSizeChange = (newSize: number) => {
     setFilters((prev) => ({
       ...prev,
@@ -222,62 +239,115 @@ export default function AgentOrdersPage() {
     setCurrentPage(1);
   };
 
-  // Handle pagination
   const handlePageChange = (newPage: number) => {
     if (newPage > 0 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
 
-  // Export function with proper error handling
+  const handleBulkStatusChange = async (newStatus: string) => {
+    try {
+      await Promise.all(
+        selectedOrders.map((orderId) =>
+          apiService.orders.updateStatus(orderId, newStatus)
+        )
+      );
+      fetchOrders();
+      setSelectedOrders([]);
+    } catch (err) {
+      console.error("Error updating orders status:", err);
+      setError("Failed to update orders status. Please try again later.");
+    }
+  };
+
   const handleExportCSV = async () => {
     try {
-      // Since exportCSV is not implemented in apiService yet, we'll show an error
-      setError("Export functionality is not implemented yet.");
+      const exportParams: ExportParams =
+        selectedOrders.length > 0
+          ? { orderIds: selectedOrders }
+          : {
+              status: filters.status as "approve" | "unpaid" | "paid",
+              search: filters.search,
+              agentId: filters.agentId,
+              dateFrom: filters.dateRange.start || undefined,
+              dateTo: filters.dateRange.end || undefined,
+              travelFrom: filters.travelDateRange.start || undefined,
+              travelTo: filters.travelDateRange.end || undefined,
+              minPrice: filters.minPrice || undefined,
+              maxPrice: filters.maxPrice || undefined,
+              sortBy: filters.sortBy,
+              sortOrder: filters.sortOrder,
+            };
+
+      const response = await apiService.orders.exportManagerCSV(exportParams);
+      const url = window.URL.createObjectURL(new Blob([response]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `orders-export-${new Date().toISOString()}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (err) {
       console.error("Error exporting orders:", err);
       setError("Failed to export orders. Please try again later.");
     }
   };
 
+  // Helper functions
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("uk-UA", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatMoney = (amount: number) => {
+    return new Intl.NumberFormat("uk-UA", {
+      style: "currency",
+      currency: "EUR",
+    }).format(amount);
+  };
+
   return (
-    <DashboardLayout role="agent">
+    <DashboardLayout role="manager">
       {/* Header section */}
       <div className="mb-6 flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
             Orders Management
           </h1>
-          <p className="text-gray-600">View and manage your client orders</p>
+          <p className="text-gray-600">Manage and monitor all agent orders</p>
           <div className="mt-2 text-sm text-gray-500">
             Total orders: {totalRecords}
           </div>
         </div>
         <div className="flex gap-2">
+          {selectedOrders.length > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleBulkStatusChange("approve")}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Approve Selected
+              </button>
+              <button
+                onClick={() => handleBulkStatusChange("paid")}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                Mark as Paid
+              </button>
+            </div>
+          )}
           <button
             onClick={handleExportCSV}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
           >
             Export to CSV
           </button>
-          <Link
-            href="/agent/orders/create"
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <svg
-              className="-ml-1 mr-2 h-5 w-5"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-            New Order
-          </Link>
         </div>
       </div>
 
@@ -296,13 +366,82 @@ export default function AgentOrdersPage() {
               id="status"
               value={filters.status}
               onChange={(e) => handleFilterChange("status", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
               <option value="">All Statuses</option>
               <option value="approve">Approved</option>
               <option value="unpaid">Unpaid</option>
               <option value="paid">Paid</option>
             </select>
+          </div>
+
+          {/* Agent Filter */}
+          <div>
+            <label
+              htmlFor="agent"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Filter by Agent
+            </label>
+            <select
+              id="agent"
+              value={filters.agentId}
+              onChange={(e) => handleFilterChange("agentId", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">All Agents</option>
+              {agents.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.firstName} {agent.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Price Range Filters */}
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label
+                htmlFor="minPrice"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Min Price
+              </label>
+              <input
+                type="number"
+                id="minPrice"
+                value={filters.minPrice || ""}
+                onChange={(e) =>
+                  handleFilterChange(
+                    "minPrice",
+                    e.target.value ? Number(e.target.value) : null
+                  )
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Min €"
+              />
+            </div>
+            <div className="flex-1">
+              <label
+                htmlFor="maxPrice"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Max Price
+              </label>
+              <input
+                type="number"
+                id="maxPrice"
+                value={filters.maxPrice || ""}
+                onChange={(e) =>
+                  handleFilterChange(
+                    "maxPrice",
+                    e.target.value ? Number(e.target.value) : null
+                  )
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Max €"
+              />
+            </div>
           </div>
 
           {/* Date Range Filters */}
@@ -323,7 +462,7 @@ export default function AgentOrdersPage() {
                     start: date ? date.toISOString() : null,
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 placeholderText="Start Date"
                 dateFormat="dd/MM/yyyy"
               />
@@ -337,7 +476,48 @@ export default function AgentOrdersPage() {
                     end: date ? date.toISOString() : null,
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholderText="End Date"
+                dateFormat="dd/MM/yyyy"
+              />
+            </div>
+          </div>
+
+          {/* Travel Date Range */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Travel Date Range
+            </label>
+            <div className="flex gap-2">
+              <DatePicker
+                selected={
+                  filters.travelDateRange.start
+                    ? new Date(filters.travelDateRange.start)
+                    : null
+                }
+                onChange={(date: Date | null) =>
+                  handleFilterChange("travelDateRange", {
+                    ...filters.travelDateRange,
+                    start: date ? date.toISOString() : null,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholderText="Start Date"
+                dateFormat="dd/MM/yyyy"
+              />
+              <DatePicker
+                selected={
+                  filters.travelDateRange.end
+                    ? new Date(filters.travelDateRange.end)
+                    : null
+                }
+                onChange={(date: Date | null) =>
+                  handleFilterChange("travelDateRange", {
+                    ...filters.travelDateRange,
+                    end: date ? date.toISOString() : null,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 placeholderText="End Date"
                 dateFormat="dd/MM/yyyy"
               />
@@ -358,7 +538,7 @@ export default function AgentOrdersPage() {
               value={filters.search}
               onChange={(e) => handleFilterChange("search", e.target.value)}
               placeholder="Search by client name, location..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
             />
           </div>
         </div>
@@ -376,7 +556,7 @@ export default function AgentOrdersPage() {
               id="limit"
               value={filters.limit}
               onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md"
             >
               <option value="10">10</option>
               <option value="25">25</option>
@@ -385,13 +565,18 @@ export default function AgentOrdersPage() {
             </select>
             <span className="text-sm text-gray-700">entries</span>
           </div>
+          {selectedOrders.length > 0 && (
+            <div className="text-sm text-gray-700">
+              {selectedOrders.length} orders selected
+            </div>
+          )}
         </div>
       </div>
 
       {/* Orders Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-800">Your Orders</h2>
+          <h2 className="text-lg font-semibold text-gray-800">All Orders</h2>
           <button
             onClick={() => fetchOrders()}
             className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-sm"
@@ -429,7 +614,7 @@ export default function AgentOrdersPage() {
               No orders found
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Try changing your filters or create a new order.
+              Try changing your filters to see more results.
             </p>
           </div>
         ) : (
@@ -437,12 +622,37 @@ export default function AgentOrdersPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedOrders.length === orders.length}
+                      onChange={(e) => {
+                        setSelectedOrders(
+                          e.target.checked
+                            ? orders.map((order) => order.id)
+                            : []
+                        );
+                      }}
+                      className="rounded border-gray-300 text-blue-600"
+                    />
+                  </th>
                   <th
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                     onClick={() => handleSortChange("reservationNumber")}
                   >
                     Reservation #
                     {filters.sortBy === "reservationNumber" && (
+                      <span className="ml-1">
+                        {filters.sortOrder === "asc" ? "↑" : "↓"}
+                      </span>
+                    )}
+                  </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSortChange("agentName")}
+                  >
+                    Agent
+                    {filters.sortBy === "agentName" && (
                       <span className="ml-1">
                         {filters.sortOrder === "asc" ? "↑" : "↓"}
                       </span>
@@ -465,8 +675,19 @@ export default function AgentOrdersPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Dates
                   </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSortChange("totalPrice")}
+                  >
+                    Price
+                    {filters.sortBy === "totalPrice" && (
+                      <span className="ml-1">
+                        {filters.sortOrder === "asc" ? "↑" : "↓"}
+                      </span>
+                    )}
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment Status
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -477,16 +698,41 @@ export default function AgentOrdersPage() {
                 {orders.map((order) => (
                   <tr
                     key={order.id}
-                    className={
-                      order.payments.balance.status === "unpaid" &&
-                      new Date(order.checkIn) <
-                        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                        ? "bg-yellow-50"
-                        : ""
-                    }
+                    className={`
+                      ${selectedOrders.includes(order.id) ? "bg-blue-50" : ""}
+                      ${
+                        order.payments.balance.status === "unpaid" &&
+                        new Date(order.checkIn) <
+                          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                          ? "bg-yellow-50"
+                          : ""
+                      }
+                    `}
                   >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedOrders.includes(order.id)}
+                        onChange={(e) => {
+                          setSelectedOrders((prev) =>
+                            e.target.checked
+                              ? [...prev, order.id]
+                              : prev.filter((id) => id !== order.id)
+                          );
+                        }}
+                        className="rounded border-gray-300 text-blue-600"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       #{order.reservationNumber}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="font-medium">
+                        {order.agent.firstName} {order.agent.lastName}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {order.agent.email}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="font-medium">{order.clientName}</div>
@@ -499,12 +745,21 @@ export default function AgentOrdersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>{order.locationTravel}</div>
+                      <div className="text-xs text-gray-400">
+                        {order.agentCountry}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>Check-in: {formatDate(order.checkIn)}</div>
                       <div>Check-out: {formatDate(order.checkOut)}</div>
                       <div className="text-xs text-gray-400">
                         {order.nights} nights
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div>{formatMoney(order.totalPrice)}</div>
+                      <div className="text-xs text-gray-400">
+                        Clean fee: {formatMoney(order.taxClean)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -532,13 +787,13 @@ export default function AgentOrdersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <Link
-                        href={`/agent/orders/${order.id}`}
+                        href={`/manager/orders/${order.id}`}
                         className="text-blue-600 hover:text-blue-900 mr-3"
                       >
                         View
                       </Link>
                       <Link
-                        href={`/agent/orders/${order.id}/edit`}
+                        href={`/manager/orders/${order.id}/edit`}
                         className="text-indigo-600 hover:text-indigo-900"
                       >
                         Edit

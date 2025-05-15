@@ -1,6 +1,5 @@
 import OrderDetailClient from "./OrderDetailClient";
 
-// Серверний компонент
 interface PageProps {
   params: { id: string };
 }
