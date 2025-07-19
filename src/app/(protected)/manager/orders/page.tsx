@@ -41,11 +41,15 @@ interface Order {
   agentId: string;
   createdOrder: string;
   agentName: string;
-  agentCountry: string;
   checkIn: string;
   checkOut: string;
   nights: number;
-  locationTravel: string;
+  clientCountry: string;
+  countryTravel: string;
+  cityTravel: string;
+  propertyName: string;
+  propertyNumber: string;
+  discount: number;
   reservationNumber: number;
   clientName: string;
   clientPhone: string[];
@@ -726,27 +730,35 @@ export default function ManagerOrdersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       #{order.reservationNumber}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="font-medium">
-                        {order.agent.firstName} {order.agent.lastName}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        {order.agent.email}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.agentName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.clientCountry}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {order.countryTravel}
+                        </span>
+                        <span className="text-gray-500">
+                          {order.cityTravel}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="font-medium">{order.clientName}</div>
-                      <div className="text-xs text-gray-400">
-                        {order.clientEmail}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        {order.clientPhone.join(", ")}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{order.locationTravel}</div>
-                      <div className="text-xs text-gray-400">
-                        {order.agentCountry}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {order.propertyName}
+                        </span>
+                        <span className="text-gray-500">
+                          {order.propertyNumber}
+                        </span>
+                        {order.discount > 0 && (
+                          <span className="text-green-600">
+                            -{order.discount}%
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

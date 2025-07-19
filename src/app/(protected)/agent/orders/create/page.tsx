@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/app/components/common/DashboardLayout";
 import apiService from "@/app/services/apiService";
+import CountrySelect from "@/app/components/common/CountrySelect";
 
 // Payment method type
 type PaymentMethod = "cash" | "bank" | "revolut";
@@ -19,14 +20,18 @@ interface Child {
 interface OrderFormData {
   // Agent information
   agentName: string;
-  agentCountry: string;
 
   // Travel information
   checkIn: string;
   checkOut: string;
   nights: number;
-  locationTravel: string;
-  reservationNumber: number | null;
+  clientCountry: string;
+  countryTravel: string;
+  cityTravel: string;
+  propertyName: string;
+  propertyNumber: string;
+  discount: number;
+  reservationNumber: string;
 
   // Client information
   clientName: string;
@@ -61,15 +66,23 @@ interface OrderFormData {
 }
 
 export default function CreateOrderPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+  } | null>(null);
   const [formData, setFormData] = useState<OrderFormData>({
     agentName: "",
-    agentCountry: "",
     checkIn: "",
     checkOut: "",
     nights: 0,
-    locationTravel: "",
-    reservationNumber: null,
+    clientCountry: "",
+    countryTravel: "",
+    cityTravel: "",
+    propertyName: "",
+    propertyNumber: "",
+    discount: 0,
+    reservationNumber: "",
     clientName: "",
     clientPhone: [""],
     clientEmail: "",
@@ -102,6 +115,34 @@ export default function CreateOrderPage() {
   const [showPreview, setShowPreview] = useState(false);
 
   const router = useRouter();
+
+  // Function to generate reservation number
+  const generateReservationNumber = (): string => {
+    const { clientCountry, checkIn, propertyNumber } = formData;
+
+    if (!clientCountry || !checkIn || !propertyNumber) {
+      return "";
+    }
+
+    // Format check-in date as DDMMYYYY
+    const checkInDate = new Date(checkIn);
+    const day = checkInDate.getDate().toString().padStart(2, "0");
+    const month = (checkInDate.getMonth() + 1).toString().padStart(2, "0");
+    const year = checkInDate.getFullYear().toString();
+    const formattedDate = `${day}${month}${year}`;
+
+    // Generate reservation number: [Country Code][Date][N][Property Number]
+    return `${clientCountry}${formattedDate}N${propertyNumber}`;
+  };
+
+  // Update reservation number when dependent fields change
+  useEffect(() => {
+    const newReservationNumber = generateReservationNumber();
+    setFormData((prev) => ({
+      ...prev,
+      reservationNumber: newReservationNumber,
+    }));
+  }, [formData.clientCountry, formData.checkIn, formData.propertyNumber]);
 
   // Get user data on component mount
   useEffect(() => {
@@ -164,7 +205,11 @@ export default function CreateOrderPage() {
     const { name, value } = e.target;
 
     // Clear errors for the current field
-    setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      return newErrors;
+    });
 
     // Handle nested properties
     if (name.includes(".")) {
@@ -172,18 +217,18 @@ export default function CreateOrderPage() {
       setFormData((prev) => ({
         ...prev,
         [parent]: {
-          ...prev[parent as keyof OrderFormData],
+          ...(prev[parent as keyof OrderFormData] as Record<string, unknown>),
           [child]: value,
         },
       }));
     } else {
       // Convert to number if the field expects a number
       const numberFields = [
-        "reservationNumber",
         "nights",
         "officialPrice",
         "taxClean",
         "totalPrice",
+        "discount",
       ];
 
       if (numberFields.includes(name) && value) {
@@ -198,6 +243,20 @@ export default function CreateOrderPage() {
         }));
       }
     }
+  };
+
+  // Handle country selection
+  const handleCountryChange = (countryCode: string) => {
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors.clientCountry;
+      return newErrors;
+    });
+
+    setFormData((prev) => ({
+      ...prev,
+      clientCountry: countryCode,
+    }));
   };
 
   // Handle change for guests.adults
@@ -372,8 +431,20 @@ export default function CreateOrderPage() {
         newErrors.checkOut = "Check-out date must be after check-in date";
       }
     }
-    if (!formData.locationTravel.trim()) {
-      newErrors.locationTravel = "Travel location is required";
+    if (!formData.clientCountry.trim()) {
+      newErrors.clientCountry = "Client country is required";
+    }
+    if (!formData.countryTravel.trim()) {
+      newErrors.countryTravel = "Country of travel is required";
+    }
+    if (!formData.cityTravel.trim()) {
+      newErrors.cityTravel = "City of travel is required";
+    }
+    if (!formData.propertyName.trim()) {
+      newErrors.propertyName = "Property name is required";
+    }
+    if (!formData.propertyNumber.trim()) {
+      newErrors.propertyNumber = "Property number is required";
     }
 
     // Validate client information
@@ -440,7 +511,7 @@ export default function CreateOrderPage() {
       };
 
       // Call the API
-      const response = await apiService.orders.create(requestData);
+      await apiService.orders.create(requestData);
 
       // Handle successful response
       setSubmitSuccess(true);
@@ -453,27 +524,34 @@ export default function CreateOrderPage() {
       console.error("Error creating order:", error);
 
       // Handle different error types
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        if (error.response.status === 422) {
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = error as {
+          response: {
+            status: number;
+            data: { errors?: Record<string, unknown>; message?: string };
+          };
+        };
+
+        if (errorResponse.response.status === 422) {
           // Validation errors from the server
-          const serverErrors = error.response.data.errors;
+          const serverErrors = errorResponse.response.data.errors;
           const formattedErrors: Record<string, string> = {};
 
           // Format server errors to match our local error structure
-          Object.entries(serverErrors).forEach(
-            ([key, messages]: [string, any]) => {
-              formattedErrors[key] = Array.isArray(messages)
-                ? messages[0]
-                : messages;
-            }
-          );
+          if (serverErrors) {
+            Object.entries(serverErrors).forEach(
+              ([key, messages]: [string, unknown]) => {
+                formattedErrors[key] = Array.isArray(messages)
+                  ? String(messages[0])
+                  : String(messages);
+              }
+            );
+          }
 
           setErrors(formattedErrors);
         } else if (
-          error.response.status === 401 ||
-          error.response.status === 403
+          errorResponse.response.status === 401 ||
+          errorResponse.response.status === 403
         ) {
           // Authentication or authorization error
           setSubmitError(
@@ -488,18 +566,20 @@ export default function CreateOrderPage() {
           // Other server errors
           setSubmitError(
             `Server error: ${
-              error.response.data.message || "Something went wrong"
+              errorResponse.response.data.message || "Something went wrong"
             }`
           );
         }
-      } else if (error.request) {
+      } else if (error && typeof error === "object" && "request" in error) {
         // The request was made but no response was received
         setSubmitError(
           "No response from server. Please check your internet connection and try again."
         );
       } else {
         // Something happened in setting up the request that triggered an error
-        setSubmitError(`Error: ${error.message}`);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        setSubmitError(`Error: ${errorMessage}`);
       }
     } finally {
       setIsSubmitting(false);
@@ -583,10 +663,6 @@ export default function CreateOrderPage() {
                 <span className="font-medium">Agent Name:</span>{" "}
                 {formData.agentName}
               </p>
-              <p>
-                <span className="font-medium">Country:</span>{" "}
-                {formData.agentCountry}
-              </p>
 
               <h2 className="text-lg font-semibold text-gray-800 mt-6 mb-4 border-b pb-2">
                 Travel Information
@@ -603,8 +679,28 @@ export default function CreateOrderPage() {
                 <span className="font-medium">Nights:</span> {formData.nights}
               </p>
               <p>
-                <span className="font-medium">Location:</span>{" "}
-                {formData.locationTravel}
+                <span className="font-medium">Client Country:</span>{" "}
+                {formData.clientCountry}
+              </p>
+              <p>
+                <span className="font-medium">Country of Travel:</span>{" "}
+                {formData.countryTravel}
+              </p>
+              <p>
+                <span className="font-medium">City of Travel:</span>{" "}
+                {formData.cityTravel}
+              </p>
+              <p>
+                <span className="font-medium">Property Name:</span>{" "}
+                {formData.propertyName}
+              </p>
+              <p>
+                <span className="font-medium">Property Number:</span>{" "}
+                {formData.propertyNumber}
+              </p>
+              <p>
+                <span className="font-medium">Discount:</span>{" "}
+                {formData.discount}%
               </p>
               <p>
                 <span className="font-medium">Reservation Number:</span>{" "}
@@ -879,26 +975,137 @@ export default function CreateOrderPage() {
 
               <div>
                 <label
-                  htmlFor="locationTravel"
+                  htmlFor="clientCountry"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Travel Location <span className="text-red-500">*</span>
+                  Client Country <span className="text-red-500">*</span>
+                </label>
+                <CountrySelect
+                  value={formData.clientCountry}
+                  onChange={handleCountryChange}
+                  placeholder="Select a country"
+                  error={!!errors.clientCountry}
+                />
+                {errors.clientCountry && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.clientCountry}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="countryTravel"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Country of Travel <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  id="locationTravel"
-                  name="locationTravel"
-                  value={formData.locationTravel}
+                  id="countryTravel"
+                  name="countryTravel"
+                  value={formData.countryTravel}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-2 border ${
-                    errors.locationTravel ? "border-red-500" : "border-gray-300"
+                    errors.countryTravel ? "border-red-500" : "border-gray-300"
                   } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
                 />
-                {errors.locationTravel && (
+                {errors.countryTravel && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.locationTravel}
+                    {errors.countryTravel}
                   </p>
                 )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="cityTravel"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  City of Travel <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="cityTravel"
+                  name="cityTravel"
+                  value={formData.cityTravel}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.cityTravel ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {errors.cityTravel && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.cityTravel}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="propertyName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Property Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="propertyName"
+                  name="propertyName"
+                  value={formData.propertyName}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.propertyName ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {errors.propertyName && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.propertyName}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="propertyNumber"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Property Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="propertyNumber"
+                  name="propertyNumber"
+                  value={formData.propertyNumber}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.propertyNumber ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {errors.propertyNumber && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.propertyNumber}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="discount"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Discount (%)
+                </label>
+                <input
+                  type="number"
+                  id="discount"
+                  name="discount"
+                  min="0"
+                  max="100"
+                  value={formData.discount || ""}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
 
               <div>
@@ -909,13 +1116,17 @@ export default function CreateOrderPage() {
                   Reservation Number
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   id="reservationNumber"
                   name="reservationNumber"
-                  value={formData.reservationNumber || ""}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.reservationNumber}
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Automatically generated from Client Country, Check-in Date,
+                  and Property Number
+                </p>
               </div>
             </div>
           </div>
@@ -1035,22 +1246,6 @@ export default function CreateOrderPage() {
                     )}
                   </div>
                 ))}
-              </div>
-              <div>
-                <label
-                  htmlFor="agentCountry"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Country
-                </label>
-                <input
-                  type="text"
-                  id="agentCountry"
-                  name="agentCountry"
-                  value={formData.agentCountry}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
               </div>
             </div>
           </div>

@@ -54,48 +54,24 @@ interface CreateInvitationData {
   role: "manager" | "agent";
 }
 
-interface InvitationResponse {
-  message: string;
-  invitationId: string;
+interface Invitation {
+  id: string;
   email: string;
-  role: string;
+  role: "manager" | "agent";
   invitedBy: string;
-  invitedAt: string;
-  used: boolean;
+  status: "pending" | "accepted" | "expired";
+  createdAt: string;
+  expiresAt: string;
 }
 
 interface InvitationsListResponse {
-  invitations: InvitationResponse[];
-  meta: {
-    page: number;
-    totalPages: number;
-    limit: number;
-  };
+  invitations: Invitation[];
+  page: number;
+  totalPages: number;
+  limit: number;
+  total: number;
 }
 // Типи для роботи з замовленнями
-interface Order {
-  id: string;
-  checkIn: string;
-  checkOut: string;
-  propertyName: string;
-  location: string;
-  country: string;
-  reservationCode: string;
-  reservationLink: string;
-  clientName: string;
-  clientEmail: string;
-  clientPhone: string;
-  adults: number;
-  children: number;
-  totalPrice: number;
-  cashOnCheckIn: boolean;
-  damageDeposit: boolean;
-  status: "draft" | "confirmed" | "paid";
-  paymentMethod: string;
-  paymentStatus: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 // This is an update to the existing src/app/services/apiService.ts file.
 // This content should be added to the existing file.
@@ -113,12 +89,16 @@ interface OrderPayment {
 
 interface OrderFormData {
   agentName: string;
-  agentCountry: string;
   checkIn: string;
   checkOut: string;
   nights: number;
-  locationTravel: string;
-  reservationNumber: number | null;
+  clientCountry: string;
+  countryTravel: string;
+  cityTravel: string;
+  propertyName: string;
+  propertyNumber: string;
+  discount: number;
+  reservationNumber: string;
   clientName: string;
   clientPhone: string[];
   clientEmail: string;
@@ -192,7 +172,7 @@ interface LoginResponse {
   user?: {
     email: string;
     role: string;
-    [key: string]: any; // Для додаткових полів
+    [key: string]: string | number | boolean; // Більш конкретний тип замість any
   };
   role?: string;
 }
@@ -239,11 +219,15 @@ interface OrderDetails {
   agentId: string;
   createdOrder: string;
   agentName: string;
-  agentCountry: string;
   checkIn: string;
   checkOut: string;
   nights: number;
-  locationTravel: string;
+  clientCountry: string;
+  countryTravel: string;
+  cityTravel: string;
+  propertyName: string;
+  propertyNumber: string;
+  discount: number;
   reservationNumber: number;
   clientName: string;
   clientPhone: string[];

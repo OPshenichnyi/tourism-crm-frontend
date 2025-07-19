@@ -102,7 +102,89 @@ export default function OrderDetailsPage({ params }: PageProps) {
         </div>
 
         {/* Content Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Agent Information */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Agent Information
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm font-medium text-gray-500">
+                  Agent Name:
+                </span>
+                <p className="text-gray-900">{order.agentName}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Travel Information */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Travel Information
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm font-medium text-gray-500">
+                  Check-in:
+                </span>
+                <p className="text-gray-900">{formatDate(order.checkIn)}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">
+                  Check-out:
+                </span>
+                <p className="text-gray-900">{formatDate(order.checkOut)}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">
+                  Nights:
+                </span>
+                <p className="text-gray-900">{order.nights}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">
+                  Client Country:
+                </span>
+                <p className="text-gray-900">{order.clientCountry}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">
+                  Country of Travel:
+                </span>
+                <p className="text-gray-900">{order.countryTravel}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">
+                  City of Travel:
+                </span>
+                <p className="text-gray-900">{order.cityTravel}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">
+                  Property Name:
+                </span>
+                <p className="text-gray-900">{order.propertyName}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">
+                  Property Number:
+                </span>
+                <p className="text-gray-900">{order.propertyNumber}</p>
+              </div>
+              {order.discount > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-500">
+                    Discount:
+                  </span>
+                  <p className="text-green-600 font-medium">
+                    {order.discount}%
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Client Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -140,30 +222,6 @@ export default function OrderDetailsPage({ params }: PageProps) {
                     років
                   </p>
                 )}
-              </div>
-            </div>
-          </div>
-
-          {/* Travel Information */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Інформація про подорож
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-500">Локація</label>
-                <p className="font-medium">{order.locationTravel}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-500">Дати</label>
-                <p className="font-medium">
-                  {formatDate(order.checkIn)} - {formatDate(order.checkOut)}
-                </p>
-                <p className="text-sm text-gray-500">{order.nights} ночей</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-500">Країна агента</label>
-                <p className="font-medium">{order.agentCountry}</p>
               </div>
             </div>
           </div>
