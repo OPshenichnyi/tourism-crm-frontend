@@ -1,4 +1,10 @@
 import axios from "axios";
+import {
+  CreateBankAccountData,
+  UpdateBankAccountData,
+  BankAccountResponse,
+  BankAccountsListResponse,
+} from "@/app/types/bankAccount";
 
 // Чітко вкажіть URL, який ви бачили в Postman
 const API_URL = "http://localhost:3000";
@@ -637,6 +643,60 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error("Export orders API error:", error);
+        throw error;
+      }
+    },
+  },
+  bankAccounts: {
+    // Get list of all bank accounts
+    getList: async (): Promise<BankAccountsListResponse> => {
+      setAuthToken();
+      try {
+        const response = await api.get("/api/bank-accounts");
+        return response.data;
+      } catch (error) {
+        console.error("Get bank accounts list API error:", error);
+        throw error;
+      }
+    },
+
+    // Create a new bank account
+    create: async (
+      data: CreateBankAccountData
+    ): Promise<BankAccountResponse> => {
+      setAuthToken();
+      try {
+        const response = await api.post("/api/bank-accounts", data);
+        return response.data;
+      } catch (error) {
+        console.error("Create bank account API error:", error);
+        throw error;
+      }
+    },
+
+    // Update bank account
+    update: async (
+      id: string,
+      data: UpdateBankAccountData
+    ): Promise<BankAccountResponse> => {
+      setAuthToken();
+      try {
+        const response = await api.put(`/api/bank-accounts/${id}`, data);
+        return response.data;
+      } catch (error) {
+        console.error("Update bank account API error:", error);
+        throw error;
+      }
+    },
+
+    // Delete bank account
+    delete: async (id: string) => {
+      setAuthToken();
+      try {
+        const response = await api.delete(`/api/bank-accounts/${id}`);
+        return response.data;
+      } catch (error) {
+        console.error("Delete bank account API error:", error);
         throw error;
       }
     },

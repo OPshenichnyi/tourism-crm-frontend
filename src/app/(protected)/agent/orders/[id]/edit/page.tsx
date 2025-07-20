@@ -171,16 +171,17 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     }
   }, [formData.checkIn, formData.checkOut]);
 
-  // Calculate total price when official price or tax changes
+  // Calculate total price when official price, tax, or discount changes
   useEffect(() => {
     const officialPrice = formData.officialPrice || 0;
     const taxClean = formData.taxClean || 0;
+    const discount = formData.discount || 0;
 
     setFormData((prev) => ({
       ...prev,
-      totalPrice: officialPrice + taxClean,
+      totalPrice: officialPrice + taxClean - discount,
     }));
-  }, [formData.officialPrice, formData.taxClean]);
+  }, [formData.officialPrice, formData.taxClean, formData.discount]);
 
   // Handle input change
   const handleInputChange = (
@@ -652,25 +653,6 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
 
             <div>
               <label
-                htmlFor="discount"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Discount (%)
-              </label>
-              <input
-                type="number"
-                id="discount"
-                name="discount"
-                min="0"
-                max="100"
-                value={formData.discount || ""}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label
                 htmlFor="reservationNumber"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
@@ -943,6 +925,30 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
 
             <div>
               <label
+                htmlFor="discount"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Discount (currency)
+              </label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                  $
+                </span>
+                <input
+                  type="number"
+                  id="discount"
+                  name="discount"
+                  min="0"
+                  step="0.01"
+                  value={formData.discount || ""}
+                  onChange={handleInputChange}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
                 htmlFor="totalPrice"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
@@ -962,7 +968,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                Automatically calculated
+                Automatically calculated: Official Price + Tax/Clean - Discount
               </p>
             </div>
 

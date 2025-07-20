@@ -185,16 +185,34 @@ export default function CreateOrderPage() {
     }
   }, [formData.checkIn, formData.checkOut]);
 
-  // Calculate total price when official price or tax changes
+  // Calculate total price when official price, tax, or discount changes
   useEffect(() => {
     const officialPrice = formData.officialPrice || 0;
     const taxClean = formData.taxClean || 0;
+    const discount = formData.discount || 0;
 
     setFormData((prev) => ({
       ...prev,
-      totalPrice: officialPrice + taxClean,
+      totalPrice: officialPrice + taxClean - discount,
     }));
-  }, [formData.officialPrice, formData.taxClean]);
+  }, [formData.officialPrice, formData.taxClean, formData.discount]);
+
+  // Calculate balance amount when total price or deposit amount changes
+  useEffect(() => {
+    const totalPrice = formData.totalPrice || 0;
+    const depositAmount = formData.payments.deposit.amount || 0;
+
+    setFormData((prev) => ({
+      ...prev,
+      payments: {
+        ...prev.payments,
+        balance: {
+          ...prev.payments.balance,
+          amount: totalPrice - depositAmount,
+        },
+      },
+    }));
+  }, [formData.totalPrice, formData.payments.deposit.amount]);
 
   // Handle input change for simple fields
   const handleInputChange = (
@@ -340,34 +358,6 @@ export default function CreateOrderPage() {
       guests: {
         ...prev.guests,
         children: newChildren,
-      },
-    }));
-  };
-
-  // Handle payment method toggle
-  const togglePaymentMethod = (
-    paymentType: "deposit" | "balance",
-    method: PaymentMethod
-  ) => {
-    const currentMethods = formData.payments[paymentType].paymentMethods;
-    let newMethods: PaymentMethod[];
-
-    if (currentMethods.includes(method)) {
-      // Remove method if already selected
-      newMethods = currentMethods.filter((m) => m !== method);
-    } else {
-      // Add method if not selected
-      newMethods = [...currentMethods, method];
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      payments: {
-        ...prev.payments,
-        [paymentType]: {
-          ...prev.payments[paymentType],
-          paymentMethods: newMethods,
-        },
       },
     }));
   };
@@ -786,12 +776,6 @@ export default function CreateOrderPage() {
                   </span>
                 </p>
                 <p>Amount: ${formData.payments.deposit.amount}</p>
-                {formData.payments.deposit.paymentMethods.length > 0 && (
-                  <p>
-                    Methods:{" "}
-                    {formData.payments.deposit.paymentMethods.join(", ")}
-                  </p>
-                )}
               </div>
 
               <div>
@@ -1087,25 +1071,6 @@ export default function CreateOrderPage() {
                     {errors.propertyNumber}
                   </p>
                 )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="discount"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Discount (%)
-                </label>
-                <input
-                  type="number"
-                  id="discount"
-                  name="discount"
-                  min="0"
-                  max="100"
-                  value={formData.discount || ""}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
               </div>
 
               <div>
@@ -1419,6 +1384,30 @@ export default function CreateOrderPage() {
 
               <div>
                 <label
+                  htmlFor="discount"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Discount (currency)
+                </label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    id="discount"
+                    name="discount"
+                    min="0"
+                    step="0.01"
+                    value={formData.discount || ""}
+                    onChange={handleInputChange}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
                   htmlFor="totalPrice"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
@@ -1438,7 +1427,8 @@ export default function CreateOrderPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  Automatically calculated
+                  Automatically calculated: Official Price + Tax/Clean -
+                  Discount
                 </p>
               </div>
 
@@ -1538,49 +1528,6 @@ export default function CreateOrderPage() {
                   </div>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Payment Methods
-                </label>
-                <div className="flex flex-wrap gap-3">
-                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4 text-blue-600"
-                      checked={formData.payments.deposit.paymentMethods.includes(
-                        "cash"
-                      )}
-                      onChange={() => togglePaymentMethod("deposit", "cash")}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Cash</span>
-                  </label>
-                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4 text-blue-600"
-                      checked={formData.payments.deposit.paymentMethods.includes(
-                        "bank"
-                      )}
-                      onChange={() => togglePaymentMethod("deposit", "bank")}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      Bank Transfer
-                    </span>
-                  </label>
-                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4 text-blue-600"
-                      checked={formData.payments.deposit.paymentMethods.includes(
-                        "revolut"
-                      )}
-                      onChange={() => togglePaymentMethod("deposit", "revolut")}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Revolut</span>
-                  </label>
-                </div>
-              </div>
             </div>
 
             {/* Balance Section */}
@@ -1645,55 +1592,13 @@ export default function CreateOrderPage() {
                       min="0"
                       step="0.01"
                       value={formData.payments.balance.amount || ""}
-                      onChange={(e) =>
-                        handlePaymentAmountChange("balance", e.target.value)
-                      }
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      readOnly
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md shadow-sm bg-gray-50"
                     />
                   </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Payment Methods
-                </label>
-                <div className="flex flex-wrap gap-3">
-                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4 text-blue-600"
-                      checked={formData.payments.balance.paymentMethods.includes(
-                        "cash"
-                      )}
-                      onChange={() => togglePaymentMethod("balance", "cash")}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Cash</span>
-                  </label>
-                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4 text-blue-600"
-                      checked={formData.payments.balance.paymentMethods.includes(
-                        "bank"
-                      )}
-                      onChange={() => togglePaymentMethod("balance", "bank")}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      Bank Transfer
-                    </span>
-                  </label>
-                  <label className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4 text-blue-600"
-                      checked={formData.payments.balance.paymentMethods.includes(
-                        "revolut"
-                      )}
-                      onChange={() => togglePaymentMethod("balance", "revolut")}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Revolut</span>
-                  </label>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Automatically calculated: Total Price - Deposit Amount
+                  </p>
                 </div>
               </div>
             </div>
