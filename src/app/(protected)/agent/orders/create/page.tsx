@@ -108,6 +108,15 @@ export default function CreateOrderPage() {
     },
   });
 
+  // Додаємо стан для банківських акаунтів
+  const [bankAccounts, setBankAccounts] = useState<
+    { id: string; identifier: string }[]
+  >([]);
+  const [bankAccountsLoading, setBankAccountsLoading] = useState(false);
+  const [bankAccountsError, setBankAccountsError] = useState<string | null>(
+    null
+  );
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -213,6 +222,38 @@ export default function CreateOrderPage() {
       },
     }));
   }, [formData.totalPrice, formData.payments.deposit.amount]);
+
+  // Завантаження банківських акаунтів при монтуванні
+  useEffect(() => {
+    async function fetchBankAccounts() {
+      setBankAccountsLoading(true);
+      setBankAccountsError(null);
+      try {
+        const response = await apiService.bankAccounts.getList();
+        if (response.success && Array.isArray(response.data)) {
+          setBankAccounts(
+            response.data.map((acc: { id: string; identifier: string }) => ({
+              id: acc.id,
+              identifier: acc.identifier,
+            }))
+          );
+        } else {
+          setBankAccountsError(
+            "Не вдалося отримати список банківських акаунтів"
+          );
+        }
+      } catch (error) {
+        setBankAccountsError(
+          error instanceof Error
+            ? error.message
+            : "Помилка при завантаженні акаунтів"
+        );
+      } finally {
+        setBankAccountsLoading(false);
+      }
+    }
+    fetchBankAccounts();
+  }, []);
 
   // Handle input change for simple fields
   const handleInputChange = (
@@ -458,6 +499,10 @@ export default function CreateOrderPage() {
     if (formData.officialPrice === null || formData.officialPrice < 0) {
       newErrors.officialPrice =
         "Official price is required and must be a positive number";
+    }
+    // Validate bank account
+    if (!formData.bankAccount) {
+      newErrors.bankAccount = "Bank account is required";
     }
 
     // Set errors and return validation result
@@ -1437,17 +1482,43 @@ export default function CreateOrderPage() {
                   htmlFor="bankAccount"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Bank Account
+                  Bank Account <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  id="bankAccount"
-                  name="bankAccount"
-                  value={formData.bankAccount}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. PL61109010140000071219812874"
-                />
+                {bankAccountsLoading ? (
+                  <div className="text-gray-500 text-sm">
+                    Завантаження акаунтів...
+                  </div>
+                ) : bankAccountsError ? (
+                  <div className="text-red-500 text-sm">
+                    {bankAccountsError}
+                  </div>
+                ) : (
+                  <div>
+                    <select
+                      id="bankAccount"
+                      name="bankAccount"
+                      value={formData.bankAccount}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 border ${
+                        errors.bankAccount
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                    >
+                      <option value="">Оберіть банківський акаунт</option>
+                      {bankAccounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.identifier}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.bankAccount && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.bankAccount}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
