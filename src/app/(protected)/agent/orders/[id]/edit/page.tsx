@@ -9,7 +9,7 @@ import { OrderDetails } from "@/app/types/order";
 
 // Temporary interface for API response that might have number reservationNumber
 interface ApiOrderDetails extends Omit<OrderDetails, "reservationNumber"> {
-  reservationNumber: number;
+  reservationNumber: string;
 }
 
 interface EditOrderPageProps {
@@ -77,6 +77,15 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Додаємо стан для банківських акаунтів
+  const [bankAccounts, setBankAccounts] = useState<
+    { id: string; identifier: string }[]
+  >([]);
+  const [bankAccountsLoading, setBankAccountsLoading] = useState(false);
+  const [bankAccountsError, setBankAccountsError] = useState<string | null>(
+    null
+  );
+
   // Function to generate reservation number
   const generateReservationNumber = (): string => {
     const { clientCountry, checkIn, propertyNumber } = formData;
@@ -98,12 +107,53 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
 
   // Update reservation number when dependent fields change
   useEffect(() => {
-    const newReservationNumber = generateReservationNumber();
-    setFormData((prev) => ({
-      ...prev,
-      reservationNumber: newReservationNumber,
-    }));
+    // Only update if all required fields are present
+    if (formData.clientCountry && formData.checkIn && formData.propertyNumber) {
+      const newReservationNumber = generateReservationNumber();
+      // Only update if the generated number is different from current
+      if (
+        newReservationNumber &&
+        newReservationNumber !== formData.reservationNumber
+      ) {
+        setFormData((prev) => ({
+          ...prev,
+          reservationNumber: newReservationNumber,
+        }));
+      }
+    }
   }, [formData.clientCountry, formData.checkIn, formData.propertyNumber]);
+
+  // Завантаження банківських акаунтів при монтуванні
+  useEffect(() => {
+    async function fetchBankAccounts() {
+      setBankAccountsLoading(true);
+      setBankAccountsError(null);
+      try {
+        const response = await apiService.bankAccounts.getList();
+        if (response.success && Array.isArray(response.data)) {
+          setBankAccounts(
+            response.data.map((acc: { id: string; identifier: string }) => ({
+              id: acc.id,
+              identifier: acc.identifier,
+            }))
+          );
+        } else {
+          setBankAccountsError(
+            "Не вдалося отримати список банківських акаунтів"
+          );
+        }
+      } catch (error) {
+        setBankAccountsError(
+          error instanceof Error
+            ? error.message
+            : "Помилка при завантаженні акаунтів"
+        );
+      } finally {
+        setBankAccountsLoading(false);
+      }
+    }
+    fetchBankAccounts();
+  }, []);
 
   // Load order data
   useEffect(() => {
@@ -126,7 +176,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
           propertyName: orderData.propertyName,
           propertyNumber: orderData.propertyNumber,
           discount: orderData.discount,
-          reservationNumber: String(orderData.reservationNumber),
+          reservationNumber: orderData.reservationNumber,
           clientName: orderData.clientName,
           clientPhone: orderData.clientPhone,
           clientEmail: orderData.clientEmail,
@@ -140,7 +190,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
         // Update order state with converted data
         setOrder({
           ...orderData,
-          reservationNumber: String(orderData.reservationNumber),
+          reservationNumber: orderData.reservationNumber,
         });
       } catch (err) {
         console.error("Error fetching order:", err);
@@ -372,6 +422,10 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
       newErrors.officialPrice =
         "Official price is required and must be a positive number";
     }
+    // Validate bank account
+    if (!formData.bankAccount) {
+      newErrors.bankAccount = "Bank account is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -396,7 +450,13 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     setSuccess(null);
 
     try {
-      await apiService.orders.update(orderId, formData as any);
+      await apiService.orders.update(orderId, {
+        ...formData,
+        reservationNumber: formData.reservationNumber,
+        officialPrice: formData.officialPrice || undefined,
+        taxClean: formData.taxClean || undefined,
+        totalPrice: formData.totalPrice || undefined,
+      });
       setSuccess("Order updated successfully");
 
       // Clear success message after 3 seconds
@@ -977,16 +1037,35 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
                 htmlFor="bankAccount"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Bank Account
+                Bank Account <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 id="bankAccount"
                 name="bankAccount"
                 value={formData.bankAccount}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+                className={`w-full px-3 py-2 border ${
+                  errors.bankAccount ? "border-red-500" : "border-gray-300"
+                } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              >
+                <option value="">Select a bank account</option>
+                {bankAccountsLoading ? (
+                  <option value="">Loading bank accounts...</option>
+                ) : bankAccountsError ? (
+                  <option value="">{bankAccountsError}</option>
+                ) : (
+                  bankAccounts.map((account) => (
+                    <option key={account.id} value={account.identifier}>
+                      {account.identifier}
+                    </option>
+                  ))
+                )}
+              </select>
+              {errors.bankAccount && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.bankAccount}
+                </p>
+              )}
             </div>
           </div>
         </div>

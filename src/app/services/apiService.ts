@@ -234,7 +234,7 @@ interface OrderDetails {
   propertyName: string;
   propertyNumber: string;
   discount: number;
-  reservationNumber: number;
+  reservationNumber: string;
   clientName: string;
   clientPhone: string[];
   clientEmail: string;
