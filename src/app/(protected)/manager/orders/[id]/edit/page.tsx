@@ -156,17 +156,6 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
         const response = await apiService.orders.getById(orderId);
         const orderData = response.order as ApiOrderDetails;
 
-        // Find the bank account ID by identifier
-        let bankAccountId = "";
-        if (orderData.bankAccount && bankAccounts.length > 0) {
-          const foundAccount = bankAccounts.find(
-            (account) => account.identifier === orderData.bankAccount
-          );
-          if (foundAccount) {
-            bankAccountId = foundAccount.id;
-          }
-        }
-
         // Initialize form with order data
         setFormData({
           checkIn: orderData.checkIn,
@@ -186,7 +175,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
           officialPrice: orderData.officialPrice,
           taxClean: orderData.taxClean,
           totalPrice: orderData.totalPrice,
-          bankAccount: bankAccountId,
+          bankAccount: orderData.bankAccount,
         });
 
         // Update order state with converted data
@@ -203,7 +192,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     };
 
     fetchOrder();
-  }, [orderId, bankAccounts]);
+  }, [orderId]);
 
   // Calculate nights when check-in or check-out dates change
   useEffect(() => {
@@ -423,6 +412,10 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     if (formData.officialPrice === null || formData.officialPrice < 0) {
       newErrors.officialPrice =
         "Official price is required and must be a positive number";
+    }
+    // Validate bank account
+    if (!formData.bankAccount) {
+      newErrors.bankAccount = "Bank account is required";
     }
 
     setErrors(newErrors);
@@ -1035,14 +1028,16 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
                 htmlFor="bankAccount"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Bank Account
+                Bank Account <span className="text-red-500">*</span>
               </label>
               <select
                 id="bankAccount"
                 name="bankAccount"
                 value={formData.bankAccount}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border ${
+                  errors.bankAccount ? "border-red-500" : "border-gray-300"
+                } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
               >
                 <option value="">Select a bank account</option>
                 {bankAccountsLoading ? (
@@ -1057,6 +1052,11 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
                   ))
                 )}
               </select>
+              {errors.bankAccount && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.bankAccount}
+                </p>
+              )}
             </div>
           </div>
         </div>
