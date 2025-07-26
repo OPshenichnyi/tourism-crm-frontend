@@ -130,13 +130,15 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
       setBankAccountsError(null);
       try {
         const response = await apiService.bankAccounts.getList();
+
         if (response.success && Array.isArray(response.data)) {
-          setBankAccounts(
-            response.data.map((acc: { id: string; identifier: string }) => ({
+          const accounts = response.data.map(
+            (acc: { id: string; identifier: string }) => ({
               id: acc.id,
               identifier: acc.identifier,
-            }))
+            })
           );
+          setBankAccounts(accounts);
         } else {
           setBankAccountsError(
             "Не вдалося отримати список банківських акаунтів"

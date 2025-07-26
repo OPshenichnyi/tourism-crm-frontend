@@ -77,6 +77,15 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Додаємо стан для банківських акаунтів
+  const [bankAccounts, setBankAccounts] = useState<
+    { id: string; identifier: string }[]
+  >([]);
+  const [bankAccountsLoading, setBankAccountsLoading] = useState(false);
+  const [bankAccountsError, setBankAccountsError] = useState<string | null>(
+    null
+  );
+
   // Function to generate reservation number
   const generateReservationNumber = (): string => {
     const { clientCountry, checkIn, propertyNumber } = formData;
@@ -105,6 +114,38 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     }));
   }, [formData.clientCountry, formData.checkIn, formData.propertyNumber]);
 
+  // Завантаження банківських акаунтів при монтуванні
+  useEffect(() => {
+    async function fetchBankAccounts() {
+      setBankAccountsLoading(true);
+      setBankAccountsError(null);
+      try {
+        const response = await apiService.bankAccounts.getList();
+        if (response.success && Array.isArray(response.data)) {
+          setBankAccounts(
+            response.data.map((acc: { id: string; identifier: string }) => ({
+              id: acc.id,
+              identifier: acc.identifier,
+            }))
+          );
+        } else {
+          setBankAccountsError(
+            "Не вдалося отримати список банківських акаунтів"
+          );
+        }
+      } catch (error) {
+        setBankAccountsError(
+          error instanceof Error
+            ? error.message
+            : "Помилка при завантаженні акаунтів"
+        );
+      } finally {
+        setBankAccountsLoading(false);
+      }
+    }
+    fetchBankAccounts();
+  }, []);
+
   // Load order data
   useEffect(() => {
     const fetchOrder = async () => {
@@ -114,6 +155,17 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
       try {
         const response = await apiService.orders.getById(orderId);
         const orderData = response.order as ApiOrderDetails;
+
+        // Find the bank account ID by identifier
+        let bankAccountId = "";
+        if (orderData.bankAccount && bankAccounts.length > 0) {
+          const foundAccount = bankAccounts.find(
+            (account) => account.identifier === orderData.bankAccount
+          );
+          if (foundAccount) {
+            bankAccountId = foundAccount.id;
+          }
+        }
 
         // Initialize form with order data
         setFormData({
@@ -134,7 +186,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
           officialPrice: orderData.officialPrice,
           taxClean: orderData.taxClean,
           totalPrice: orderData.totalPrice,
-          bankAccount: orderData.bankAccount,
+          bankAccount: bankAccountId,
         });
 
         // Update order state with converted data
@@ -151,7 +203,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     };
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, bankAccounts]);
 
   // Calculate nights when check-in or check-out dates change
   useEffect(() => {
@@ -396,7 +448,13 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     setSuccess(null);
 
     try {
-      await apiService.orders.update(orderId, formData as any);
+      await apiService.orders.update(orderId, {
+        ...formData,
+        reservationNumber: formData.reservationNumber,
+        officialPrice: formData.officialPrice || undefined,
+        taxClean: formData.taxClean || undefined,
+        totalPrice: formData.totalPrice || undefined,
+      });
       setSuccess("Order updated successfully");
 
       // Clear success message after 3 seconds
@@ -979,14 +1037,26 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
               >
                 Bank Account
               </label>
-              <input
-                type="text"
+              <select
                 id="bankAccount"
                 name="bankAccount"
                 value={formData.bankAccount}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+              >
+                <option value="">Select a bank account</option>
+                {bankAccountsLoading ? (
+                  <option value="">Loading bank accounts...</option>
+                ) : bankAccountsError ? (
+                  <option value="">{bankAccountsError}</option>
+                ) : (
+                  bankAccounts.map((account) => (
+                    <option key={account.id} value={account.identifier}>
+                      {account.identifier}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
           </div>
         </div>
