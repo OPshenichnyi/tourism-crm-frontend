@@ -43,7 +43,7 @@ export interface OrderDetails {
   reservationNumber: string;
   clientName: string;
   clientPhone: string[];
-  clientEmail: string;
+  clientEmail: string | null;
   guests: Guests;
   officialPrice: number;
   taxClean: number;

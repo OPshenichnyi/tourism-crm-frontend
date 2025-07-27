@@ -36,7 +36,8 @@ interface OrderFormData {
   // Client information
   clientName: string;
   clientPhone: string[];
-  clientEmail: string;
+  clientEmail: string | null;
+  clientDocumentNumber: string;
 
   // Guests information
   guests: {
@@ -85,7 +86,8 @@ export default function CreateOrderPage() {
     reservationNumber: "",
     clientName: "",
     clientPhone: [""],
-    clientEmail: "",
+    clientEmail: null,
+    clientDocumentNumber: "",
     guests: {
       adults: 1,
       children: [],
@@ -485,14 +487,16 @@ export default function CreateOrderPage() {
     if (formData.clientPhone.length === 0 || !formData.clientPhone[0].trim()) {
       newErrors.clientPhone = "At least one phone number is required";
     }
-    if (!formData.clientEmail.trim()) {
-      newErrors.clientEmail = "Client email is required";
-    } else {
+    // Email validation only if email is provided
+    if (formData.clientEmail && formData.clientEmail.trim()) {
       // Email validation regex
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.clientEmail)) {
         newErrors.clientEmail = "Please enter a valid email address";
       }
+    }
+    if (!formData.clientDocumentNumber.trim()) {
+      newErrors.clientDocumentNumber = "Client document number is required";
     }
 
     // Validate price information
@@ -531,7 +535,7 @@ export default function CreateOrderPage() {
 
     try {
       // Format the data according to API requirements
-      const requestData = {
+      const baseData = {
         ...formData,
         payments: {
           deposit: {
@@ -545,7 +549,16 @@ export default function CreateOrderPage() {
         },
       };
 
+      // Create requestData - exclude clientEmail if it's empty
+      const requestData =
+        formData.clientEmail && formData.clientEmail.trim() !== ""
+          ? baseData
+          : Object.fromEntries(
+              Object.entries(baseData).filter(([key]) => key !== "clientEmail")
+            );
+
       // Call the API
+      console.log("Sending order data:", requestData);
       await apiService.orders.create(requestData);
 
       // Handle successful response
@@ -750,7 +763,11 @@ export default function CreateOrderPage() {
               </p>
               <p>
                 <span className="font-medium">Email:</span>{" "}
-                {formData.clientEmail}
+                {formData.clientEmail || "Not specified"}
+              </p>
+              <p>
+                <span className="font-medium">Document Number:</span>{" "}
+                {formData.clientDocumentNumber || "Not specified"}
               </p>
               <div>
                 <span className="font-medium">Phone Numbers:</span>
@@ -1177,13 +1194,13 @@ export default function CreateOrderPage() {
                   htmlFor="clientEmail"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Client Email <span className="text-red-500">*</span>
+                  Client Email
                 </label>
                 <input
                   type="email"
                   id="clientEmail"
                   name="clientEmail"
-                  value={formData.clientEmail}
+                  value={formData.clientEmail || ""}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-2 border ${
                     errors.clientEmail ? "border-red-500" : "border-gray-300"
@@ -1192,6 +1209,32 @@ export default function CreateOrderPage() {
                 {errors.clientEmail && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.clientEmail}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="clientDocumentNumber"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Client Document Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="clientDocumentNumber"
+                  name="clientDocumentNumber"
+                  value={formData.clientDocumentNumber}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.clientDocumentNumber
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {errors.clientDocumentNumber && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.clientDocumentNumber}
                   </p>
                 )}
               </div>

@@ -13,7 +13,7 @@ interface EditOrderPageProps {
 
 // Temporary interface for API response that might have number reservationNumber
 interface ApiOrderDetails extends Omit<OrderDetails, "reservationNumber"> {
-  reservationNumber: number;
+  reservationNumber: string;
 }
 
 interface OrderFormData {
@@ -29,7 +29,7 @@ interface OrderFormData {
   reservationNumber: string;
   clientName: string;
   clientPhone: string[];
-  clientEmail: string;
+  clientEmail: string | null;
   guests: {
     adults: number;
     children: { age: number }[];
@@ -64,7 +64,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     reservationNumber: "",
     clientName: "",
     clientPhone: [""],
-    clientEmail: "",
+    clientEmail: null,
     guests: {
       adults: 1,
       children: [],
@@ -399,9 +399,8 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     if (formData.clientPhone.length === 0 || !formData.clientPhone[0].trim()) {
       newErrors.clientPhone = "At least one phone number is required";
     }
-    if (!formData.clientEmail.trim()) {
-      newErrors.clientEmail = "Client email is required";
-    } else {
+    // Email validation only if email is provided
+    if (formData.clientEmail && formData.clientEmail.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.clientEmail)) {
         newErrors.clientEmail = "Please enter a valid email address";
@@ -441,13 +440,34 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     setSuccess(null);
 
     try {
-      await apiService.orders.update(orderId, {
+      console.log("Sending update data:", {
         ...formData,
         reservationNumber: formData.reservationNumber,
         officialPrice: formData.officialPrice || undefined,
         taxClean: formData.taxClean || undefined,
         totalPrice: formData.totalPrice || undefined,
       });
+
+      // Create update data - exclude clientEmail if it's empty
+      const baseUpdateData = {
+        ...formData,
+        reservationNumber: formData.reservationNumber,
+        officialPrice: formData.officialPrice || undefined,
+        taxClean: formData.taxClean || undefined,
+        totalPrice: formData.totalPrice || undefined,
+      };
+
+      // Create final update data without clientEmail if it's empty
+      const updateData =
+        formData.clientEmail && formData.clientEmail.trim() !== ""
+          ? baseUpdateData
+          : Object.fromEntries(
+              Object.entries(baseUpdateData).filter(
+                ([key]) => key !== "clientEmail"
+              )
+            );
+
+      await apiService.orders.update(orderId, updateData);
       setSuccess("Order updated successfully");
 
       // Clear success message after 3 seconds
@@ -759,13 +779,13 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
                 htmlFor="clientEmail"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Client Email <span className="text-red-500">*</span>
+                Client Email
               </label>
               <input
                 type="email"
                 id="clientEmail"
                 name="clientEmail"
-                value={formData.clientEmail}
+                value={formData.clientEmail || ""}
                 onChange={handleInputChange}
                 className={`w-full px-3 py-2 border ${
                   errors.clientEmail ? "border-red-500" : "border-gray-300"

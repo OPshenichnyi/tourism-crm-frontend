@@ -107,7 +107,7 @@ interface OrderFormData {
   reservationNumber: string;
   clientName: string;
   clientPhone: string[];
-  clientEmail: string;
+  clientEmail: string | null;
   guests: {
     adults: number;
     children: Child[];
@@ -237,7 +237,7 @@ interface OrderDetails {
   reservationNumber: string;
   clientName: string;
   clientPhone: string[];
-  clientEmail: string;
+  clientEmail: string | null;
   guests: Guests;
   officialPrice: number;
   taxClean: number;
@@ -528,7 +528,7 @@ const apiService = {
   },
   orders: {
     // Створення нового замовлення (POST /orders)
-    create: async (data: OrderFormData) => {
+    create: async (data: Partial<OrderFormData>) => {
       setAuthToken();
       try {
         const response = await api.post("/api/orders", data);
