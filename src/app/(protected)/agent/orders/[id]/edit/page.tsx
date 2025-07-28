@@ -30,6 +30,7 @@ interface OrderFormData {
   clientName: string;
   clientPhone: string[];
   clientEmail: string | null;
+  clientDocumentNumber: string;
   guests: {
     adults: number;
     children: { age: number }[];
@@ -65,6 +66,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     clientName: "",
     clientPhone: [""],
     clientEmail: null,
+    clientDocumentNumber: "",
     guests: {
       adults: 1,
       children: [],
@@ -181,7 +183,8 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
           reservationNumber: orderData.reservationNumber,
           clientName: orderData.clientName,
           clientPhone: orderData.clientPhone,
-          clientEmail: orderData.clientEmail,
+          clientEmail: orderData.clientEmail || "",
+          clientDocumentNumber: orderData.clientDocumentNumber || "",
           guests: orderData.guests,
           officialPrice: orderData.officialPrice,
           taxClean: orderData.taxClean,
@@ -263,10 +266,18 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
         [name]: parseFloat(value),
       }));
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      // Special handling for clientEmail to convert empty string to null
+      if (name === "clientEmail") {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value.trim() === "" ? null : value,
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
     }
   };
 
@@ -407,6 +418,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     if (!formData.clientName.trim()) {
       newErrors.clientName = "Client name is required";
     }
+    // clientDocumentNumber is optional for editing - if empty, it won't be updated
     if (formData.clientPhone.length === 0 || !formData.clientPhone[0].trim()) {
       newErrors.clientPhone = "At least one phone number is required";
     }
@@ -451,32 +463,35 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     setSuccess(null);
 
     try {
-      console.log("Sending update data:", {
-        ...formData,
+      // Create update data with proper type handling
+      const updateData: Partial<OrderDetails> = {
+        checkIn: formData.checkIn,
+        checkOut: formData.checkOut,
+        nights: formData.nights,
+        clientCountry: formData.clientCountry,
+        countryTravel: formData.countryTravel,
+        cityTravel: formData.cityTravel,
+        propertyName: formData.propertyName,
+        propertyNumber: formData.propertyNumber,
+        discount: formData.discount,
         reservationNumber: formData.reservationNumber,
+        clientName: formData.clientName,
+        clientPhone: formData.clientPhone,
+        clientEmail:
+          formData.clientEmail && formData.clientEmail.trim() !== ""
+            ? formData.clientEmail.trim()
+            : null,
+        clientDocumentNumber:
+          formData.clientDocumentNumber &&
+          formData.clientDocumentNumber.trim() !== ""
+            ? formData.clientDocumentNumber.trim()
+            : undefined,
+        guests: formData.guests,
         officialPrice: formData.officialPrice || undefined,
         taxClean: formData.taxClean || undefined,
         totalPrice: formData.totalPrice || undefined,
-      });
-
-      // Create update data - exclude clientEmail if it's empty
-      const baseUpdateData = {
-        ...formData,
-        reservationNumber: formData.reservationNumber,
-        officialPrice: formData.officialPrice || undefined,
-        taxClean: formData.taxClean || undefined,
-        totalPrice: formData.totalPrice || undefined,
+        bankAccount: formData.bankAccount,
       };
-
-      // Create final update data without clientEmail if it's empty
-      const updateData =
-        formData.clientEmail && formData.clientEmail.trim() !== ""
-          ? baseUpdateData
-          : Object.fromEntries(
-              Object.entries(baseUpdateData).filter(
-                ([key]) => key !== "clientEmail"
-              )
-            );
 
       await apiService.orders.update(orderId, updateData);
       setSuccess("Order updated successfully");
@@ -807,6 +822,35 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
                   {errors.clientEmail}
                 </p>
               )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="clientDocumentNumber"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Client Document Number
+              </label>
+              <input
+                type="text"
+                id="clientDocumentNumber"
+                name="clientDocumentNumber"
+                value={formData.clientDocumentNumber}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border ${
+                  errors.clientDocumentNumber
+                    ? "border-red-500"
+                    : "border-gray-300"
+                } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              />
+              {errors.clientDocumentNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.clientDocumentNumber}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Optional - leave empty if not needed
+              </p>
             </div>
 
             <div>

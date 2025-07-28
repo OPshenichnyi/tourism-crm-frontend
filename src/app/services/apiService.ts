@@ -108,6 +108,7 @@ interface OrderFormData {
   clientName: string;
   clientPhone: string[];
   clientEmail: string | null;
+  clientDocumentNumber: string;
   guests: {
     adults: number;
     children: Child[];
@@ -238,6 +239,7 @@ interface OrderDetails {
   clientName: string;
   clientPhone: string[];
   clientEmail: string | null;
+  clientDocumentNumber?: string;
   guests: Guests;
   officialPrice: number;
   taxClean: number;

@@ -223,6 +223,12 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 <p className="font-medium">{order.clientEmail}</p>
               </div>
               <div>
+                <label className="text-sm text-gray-500">Client ID</label>
+                <p className="font-medium">
+                  {order.clientDocumentNumber || "Не вказано"}
+                </p>
+              </div>
+              <div>
                 <label className="text-sm text-gray-500">Телефон</label>
                 {order.clientPhone.map((phone: string, index: number) => (
                   <p key={index} className="font-medium">

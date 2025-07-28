@@ -53,7 +53,7 @@ interface Order {
   clientName: string;
   clientPhone: string[];
   clientEmail: string;
-  clientDocumentNumber: string;
+  clientDocumentNumber?: string;
   guests: Guests;
   officialPrice: number;
   taxClean: number;
@@ -529,7 +529,7 @@ export default function AgentOrdersPage() {
                         {order.clientPhone.join(", ")}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {order.clientDocumentNumber}
+                        ID: {order.clientDocumentNumber || "Не вказано"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

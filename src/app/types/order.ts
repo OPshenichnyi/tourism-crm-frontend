@@ -44,6 +44,7 @@ export interface OrderDetails {
   clientName: string;
   clientPhone: string[];
   clientEmail: string | null;
+  clientDocumentNumber?: string;
   guests: Guests;
   officialPrice: number;
   taxClean: number;
