@@ -124,23 +124,22 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           </div>
         </div>
 
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Agent Information */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Agent Information
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm font-medium text-gray-500">
-                  Agent Name:
-                </span>
-                <p className="text-gray-900">{order.agentName}</p>
-              </div>
+        {/* Agent Information - Moved to top */}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-gray-500 mr-2">
+                Agent Name:
+              </span>
+              <span className="text-gray-900 font-medium">
+                {order.agentName}
+              </span>
             </div>
           </div>
+        </div>
 
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Travel Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">
