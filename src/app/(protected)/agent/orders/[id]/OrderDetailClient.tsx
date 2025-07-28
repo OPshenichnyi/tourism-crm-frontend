@@ -191,16 +191,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </span>
                 <span className="text-gray-900">{order.cityTravel}</span>
               </div>
-              {order.discount > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-500">
-                    Discount:
-                  </span>
-                  <span className="text-green-600 font-medium">
-                    {formatMoney(order.discount)}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -294,6 +284,16 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                   {formatMoney(order.taxClean)}
                 </span>
               </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-500">
+                    Discount:
+                  </span>
+                  <span className="text-green-600 font-medium">
+                    {formatMoney(order.discount)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Total amount:
