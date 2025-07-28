@@ -169,6 +169,18 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
+                  Property Name:
+                </span>
+                <span className="text-gray-900">{order.propertyName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Property Number:
+                </span>
+                <span className="text-gray-900">{order.propertyNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
                   Client Country:
                 </span>
                 <span className="text-gray-900">{order.clientCountry}</span>
@@ -184,18 +196,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                   City of Travel:
                 </span>
                 <span className="text-gray-900">{order.cityTravel}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">
-                  Property Name:
-                </span>
-                <span className="text-gray-900">{order.propertyName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">
-                  Property Number:
-                </span>
-                <span className="text-gray-900">{order.propertyNumber}</span>
               </div>
               {order.discount > 0 && (
                 <div className="flex justify-between">
