@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/app/components/common/DashboardLayout";
 import apiService from "@/app/services/apiService";
 import { format } from "date-fns";
-import { uk } from "date-fns/locale";
 import Link from "next/link";
 import { OrderDetails, Guest } from "@/app/types/order";
 
@@ -34,7 +33,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   }, [orderId]);
 
   const formatDate = (date: string) => {
-    return format(new Date(date), "d MMMM yyyy", { locale: uk });
+    return format(new Date(date), "dd.MM.yyyy");
   };
 
   const formatMoney = (amount: number) => {
@@ -146,62 +145,66 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               Travel Information
             </h2>
             <div className="space-y-3">
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Check-in:
                 </span>
-                <p className="text-gray-900">{formatDate(order.checkIn)}</p>
+                <span className="text-gray-900">
+                  {formatDate(order.checkIn)}
+                </span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Check-out:
                 </span>
-                <p className="text-gray-900">{formatDate(order.checkOut)}</p>
+                <span className="text-gray-900">
+                  {formatDate(order.checkOut)}
+                </span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Nights:
                 </span>
-                <p className="text-gray-900">{order.nights}</p>
+                <span className="text-gray-900">{order.nights}</span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Client Country:
                 </span>
-                <p className="text-gray-900">{order.clientCountry}</p>
+                <span className="text-gray-900">{order.clientCountry}</span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Country of Travel:
                 </span>
-                <p className="text-gray-900">{order.countryTravel}</p>
+                <span className="text-gray-900">{order.countryTravel}</span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   City of Travel:
                 </span>
-                <p className="text-gray-900">{order.cityTravel}</p>
+                <span className="text-gray-900">{order.cityTravel}</span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Property Name:
                 </span>
-                <p className="text-gray-900">{order.propertyName}</p>
+                <span className="text-gray-900">{order.propertyName}</span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Property Number:
                 </span>
-                <p className="text-gray-900">{order.propertyNumber}</p>
+                <span className="text-gray-900">{order.propertyNumber}</span>
               </div>
               {order.discount > 0 && (
-                <div>
+                <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-500">
                     Discount:
                   </span>
-                  <p className="text-green-600 font-medium">
+                  <span className="text-green-600 font-medium">
                     {order.discount}%
-                  </p>
+                  </span>
                 </div>
               )}
             </div>
