@@ -162,12 +162,28 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
   // Load order data
   useEffect(() => {
     const fetchOrder = async () => {
+      // Only fetch order if we have orderId and bank accounts are loaded
+      if (!orderId || bankAccountsLoading) {
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
 
       try {
         const response = await apiService.orders.getById(orderId);
         const orderData = response.order as ApiOrderDetails;
+
+        // Find the correct bank account ID if bankAccount contains identifier
+        let bankAccountId = orderData.bankAccount;
+        if (bankAccounts.length > 0 && orderData.bankAccount) {
+          const foundAccount = bankAccounts.find(
+            (account) => account.identifier === orderData.bankAccount
+          );
+          if (foundAccount) {
+            bankAccountId = foundAccount.id;
+          }
+        }
 
         // Initialize form with order data
         setFormData({
@@ -189,7 +205,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
           officialPrice: orderData.officialPrice,
           taxClean: orderData.taxClean,
           totalPrice: orderData.totalPrice,
-          bankAccount: orderData.bankAccount,
+          bankAccount: bankAccountId,
         });
 
         // Update order state with converted data
@@ -206,7 +222,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     };
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, bankAccounts, bankAccountsLoading]);
 
   // Calculate nights when check-in or check-out dates change
   useEffect(() => {
@@ -1121,7 +1137,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
                   <option value="">{bankAccountsError}</option>
                 ) : (
                   bankAccounts.map((account) => (
-                    <option key={account.id} value={account.identifier}>
+                    <option key={account.id} value={account.id}>
                       {account.identifier}
                     </option>
                   ))

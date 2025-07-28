@@ -1550,7 +1550,7 @@ export default function CreateOrderPage() {
                     >
                       <option value="">Оберіть банківський акаунт</option>
                       {bankAccounts.map((acc) => (
-                        <option key={acc.id} value={acc.identifier}>
+                        <option key={acc.id} value={acc.id}>
                           {acc.identifier}
                         </option>
                       ))}
