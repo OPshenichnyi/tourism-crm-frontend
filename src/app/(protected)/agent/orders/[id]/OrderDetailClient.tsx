@@ -181,12 +181,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
-                  Client Country:
-                </span>
-                <span className="text-gray-900">{order.clientCountry}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">
                   Country of Travel:
                 </span>
                 <span className="text-gray-900">{order.countryTravel}</span>
@@ -213,11 +207,11 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           {/* Client Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Інформація про клієнта
+              Client Information
             </h2>
             <div className="space-y-3">
               <div>
-                <label className="text-sm text-gray-500">Ім&apos;я</label>
+                <label className="text-sm text-gray-500">Name</label>
                 <p className="font-medium">{order.clientName}</p>
               </div>
               <div>
@@ -227,11 +221,15 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               <div>
                 <label className="text-sm text-gray-500">Client ID</label>
                 <p className="font-medium">
-                  {order.clientDocumentNumber || "Не вказано"}
+                  {order.clientDocumentNumber || "Not specified"}
                 </p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">Телефон</label>
+                <label className="text-sm text-gray-500">Client Country</label>
+                <p className="font-medium">{order.clientCountry}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">Phone</label>
                 {order.clientPhone.map((phone: string, index: number) => (
                   <p key={index} className="font-medium">
                     {phone}
@@ -239,18 +237,18 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 ))}
               </div>
               <div>
-                <label className="text-sm text-gray-500">Гості</label>
+                <label className="text-sm text-gray-500">Guests</label>
                 <p className="font-medium">
-                  {order.guests.adults} дорослих, {order.guests.children.length}{" "}
-                  дітей
+                  {order.guests.adults} adults, {order.guests.children.length}{" "}
+                  children
                 </p>
                 {order.guests.children.length > 0 && (
                   <p className="text-sm text-gray-500">
-                    Вік дітей:{" "}
+                    Children age:{" "}
                     {order.guests.children
                       .map((child: Guest) => child.age)
                       .join(", ")}{" "}
-                    років
+                    years
                   </p>
                 )}
               </div>
