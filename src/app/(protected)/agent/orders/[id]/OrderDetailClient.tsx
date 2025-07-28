@@ -275,29 +275,35 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           {/* Payment Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Інформація про оплату
+              Payment Information
             </h2>
             <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-500">Офіційна ціна</label>
-                <p className="font-medium">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Official price:
+                </span>
+                <span className="text-gray-900">
                   {formatMoney(order.officialPrice)}
-                </p>
+                </span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">
-                  Збір за прибирання
-                </label>
-                <p className="font-medium">{formatMoney(order.taxClean)}</p>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Cleaning fee:
+                </span>
+                <span className="text-gray-900">
+                  {formatMoney(order.taxClean)}
+                </span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Загальна сума</label>
-                <p className="text-xl font-bold text-blue-600">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Total amount:
+                </span>
+                <span className="text-xl font-bold text-blue-600">
                   {formatMoney(order.totalPrice)}
-                </p>
+                </span>
               </div>
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Депозит</h3>
+                <h3 className="font-semibold mb-2">Deposit</h3>
                 <div className="flex justify-between items-center">
                   <span
                     className={`px-2 py-1 rounded text-sm ${
@@ -307,8 +313,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                     }`}
                   >
                     {order.payments.deposit.status === "paid"
-                      ? "Оплачено"
-                      : "Не оплачено"}
+                      ? "Paid"
+                      : "Not paid"}
                   </span>
                   <span className="font-medium">
                     {formatMoney(order.payments.deposit.amount)}
@@ -316,13 +322,13 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </div>
                 {order.payments.deposit.payment_methods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Способи оплати:{" "}
+                    Payment methods:{" "}
                     {order.payments.deposit.payment_methods.join(", ")}
                   </p>
                 )}
               </div>
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Баланс</h3>
+                <h3 className="font-semibold mb-2">Balance</h3>
                 <div className="flex justify-between items-center">
                   <span
                     className={`px-2 py-1 rounded text-sm ${
@@ -332,8 +338,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                     }`}
                   >
                     {order.payments.balance.status === "paid"
-                      ? "Оплачено"
-                      : "Не оплачено"}
+                      ? "Paid"
+                      : "Not paid"}
                   </span>
                   <span className="font-medium">
                     {formatMoney(order.payments.balance.amount)}
@@ -341,7 +347,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </div>
                 {order.payments.balance.payment_methods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Способи оплати:{" "}
+                    Payment methods:{" "}
                     {order.payments.balance.payment_methods.join(", ")}
                   </p>
                 )}
