@@ -7,13 +7,13 @@ import apiService from "@/app/services/apiService";
 import CountrySelect from "@/app/components/common/CountrySelect";
 import { OrderDetails } from "@/app/types/order";
 
-interface EditOrderPageProps {
-  params: Promise<{ id: string }>;
-}
-
 // Temporary interface for API response that might have number reservationNumber
 interface ApiOrderDetails extends Omit<OrderDetails, "reservationNumber"> {
   reservationNumber: string;
+}
+
+interface EditOrderPageProps {
+  params: Promise<{ id: string }>;
 }
 
 interface OrderFormData {
@@ -30,6 +30,7 @@ interface OrderFormData {
   clientName: string;
   clientPhone: string[];
   clientEmail: string | null;
+  clientDocumentNumber: string;
   guests: {
     adults: number;
     children: { age: number }[];
@@ -65,6 +66,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     clientName: "",
     clientPhone: [""],
     clientEmail: null,
+    clientDocumentNumber: "",
     guests: {
       adults: 1,
       children: [],
@@ -107,11 +109,20 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
 
   // Update reservation number when dependent fields change
   useEffect(() => {
-    const newReservationNumber = generateReservationNumber();
-    setFormData((prev) => ({
-      ...prev,
-      reservationNumber: newReservationNumber,
-    }));
+    // Only update if all required fields are present
+    if (formData.clientCountry && formData.checkIn && formData.propertyNumber) {
+      const newReservationNumber = generateReservationNumber();
+      // Only update if the generated number is different from current
+      if (
+        newReservationNumber &&
+        newReservationNumber !== formData.reservationNumber
+      ) {
+        setFormData((prev) => ({
+          ...prev,
+          reservationNumber: newReservationNumber,
+        }));
+      }
+    }
   }, [formData.clientCountry, formData.checkIn, formData.propertyNumber]);
 
   // Завантаження банківських акаунтів при монтуванні
@@ -121,13 +132,15 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
       setBankAccountsError(null);
       try {
         const response = await apiService.bankAccounts.getList();
+
         if (response.success && Array.isArray(response.data)) {
-          setBankAccounts(
-            response.data.map((acc: { id: string; identifier: string }) => ({
+          const accounts = response.data.map(
+            (acc: { id: string; identifier: string }) => ({
               id: acc.id,
               identifier: acc.identifier,
-            }))
+            })
           );
+          setBankAccounts(accounts);
         } else {
           setBankAccountsError(
             "Не вдалося отримати список банківських акаунтів"
@@ -149,12 +162,28 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
   // Load order data
   useEffect(() => {
     const fetchOrder = async () => {
+      // Only fetch order if we have orderId and bank accounts are loaded
+      if (!orderId || bankAccountsLoading) {
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
 
       try {
         const response = await apiService.orders.getById(orderId);
         const orderData = response.order as ApiOrderDetails;
+
+        // Find the correct bank account ID if bankAccount contains identifier
+        let bankAccountId = orderData.bankAccount;
+        if (bankAccounts.length > 0 && orderData.bankAccount) {
+          const foundAccount = bankAccounts.find(
+            (account) => account.identifier === orderData.bankAccount
+          );
+          if (foundAccount) {
+            bankAccountId = foundAccount.id;
+          }
+        }
 
         // Initialize form with order data
         setFormData({
@@ -167,21 +196,22 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
           propertyName: orderData.propertyName,
           propertyNumber: orderData.propertyNumber,
           discount: orderData.discount,
-          reservationNumber: String(orderData.reservationNumber),
+          reservationNumber: orderData.reservationNumber,
           clientName: orderData.clientName,
           clientPhone: orderData.clientPhone,
-          clientEmail: orderData.clientEmail,
+          clientEmail: orderData.clientEmail || "",
+          clientDocumentNumber: orderData.clientDocumentNumber || "",
           guests: orderData.guests,
           officialPrice: orderData.officialPrice,
           taxClean: orderData.taxClean,
           totalPrice: orderData.totalPrice,
-          bankAccount: orderData.bankAccount,
+          bankAccount: bankAccountId,
         });
 
         // Update order state with converted data
         setOrder({
           ...orderData,
-          reservationNumber: String(orderData.reservationNumber),
+          reservationNumber: orderData.reservationNumber,
         });
       } catch (err) {
         console.error("Error fetching order:", err);
@@ -192,7 +222,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     };
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, bankAccounts, bankAccountsLoading]);
 
   // Calculate nights when check-in or check-out dates change
   useEffect(() => {
@@ -252,11 +282,33 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
         [name]: parseFloat(value),
       }));
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      // Special handling for clientEmail to convert empty string to null
+      if (name === "clientEmail") {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value.trim() === "" ? null : value,
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
     }
+  };
+
+  // Handle country selection
+  const handleCountryChange = (countryCode: string) => {
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors.clientCountry;
+      return newErrors;
+    });
+
+    setFormData((prev) => ({
+      ...prev,
+      clientCountry: countryCode,
+    }));
   };
 
   // Handle phone number changes
@@ -344,20 +396,6 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     }
   };
 
-  // Handle country selection
-  const handleCountryChange = (countryCode: string) => {
-    setErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors.clientCountry;
-      return newErrors;
-    });
-
-    setFormData((prev) => ({
-      ...prev,
-      clientCountry: countryCode,
-    }));
-  };
-
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -396,6 +434,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     if (!formData.clientName.trim()) {
       newErrors.clientName = "Client name is required";
     }
+    // clientDocumentNumber is optional for editing - if empty, it won't be updated
     if (formData.clientPhone.length === 0 || !formData.clientPhone[0].trim()) {
       newErrors.clientPhone = "At least one phone number is required";
     }
@@ -440,32 +479,35 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     setSuccess(null);
 
     try {
-      console.log("Sending update data:", {
-        ...formData,
+      // Create update data with proper type handling
+      const updateData: Partial<OrderDetails> = {
+        checkIn: formData.checkIn,
+        checkOut: formData.checkOut,
+        nights: formData.nights,
+        clientCountry: formData.clientCountry,
+        countryTravel: formData.countryTravel,
+        cityTravel: formData.cityTravel,
+        propertyName: formData.propertyName,
+        propertyNumber: formData.propertyNumber,
+        discount: formData.discount,
         reservationNumber: formData.reservationNumber,
+        clientName: formData.clientName,
+        clientPhone: formData.clientPhone,
+        clientEmail:
+          formData.clientEmail && formData.clientEmail.trim() !== ""
+            ? formData.clientEmail.trim()
+            : null,
+        clientDocumentNumber:
+          formData.clientDocumentNumber &&
+          formData.clientDocumentNumber.trim() !== ""
+            ? formData.clientDocumentNumber.trim()
+            : undefined,
+        guests: formData.guests,
         officialPrice: formData.officialPrice || undefined,
         taxClean: formData.taxClean || undefined,
         totalPrice: formData.totalPrice || undefined,
-      });
-
-      // Create update data - exclude clientEmail if it's empty
-      const baseUpdateData = {
-        ...formData,
-        reservationNumber: formData.reservationNumber,
-        officialPrice: formData.officialPrice || undefined,
-        taxClean: formData.taxClean || undefined,
-        totalPrice: formData.totalPrice || undefined,
+        bankAccount: formData.bankAccount,
       };
-
-      // Create final update data without clientEmail if it's empty
-      const updateData =
-        formData.clientEmail && formData.clientEmail.trim() !== ""
-          ? baseUpdateData
-          : Object.fromEntries(
-              Object.entries(baseUpdateData).filter(
-                ([key]) => key !== "clientEmail"
-              )
-            );
 
       await apiService.orders.update(orderId, updateData);
       setSuccess("Order updated successfully");
@@ -799,6 +841,35 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
             </div>
 
             <div>
+              <label
+                htmlFor="clientDocumentNumber"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Client Document Number
+              </label>
+              <input
+                type="text"
+                id="clientDocumentNumber"
+                name="clientDocumentNumber"
+                value={formData.clientDocumentNumber}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border ${
+                  errors.clientDocumentNumber
+                    ? "border-red-500"
+                    : "border-gray-300"
+                } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              />
+              {errors.clientDocumentNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.clientDocumentNumber}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Optional - leave empty if not needed
+              </p>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Client Phone Numbers <span className="text-red-500">*</span>
               </label>
@@ -1066,7 +1137,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
                   <option value="">{bankAccountsError}</option>
                 ) : (
                   bankAccounts.map((account) => (
-                    <option key={account.id} value={account.identifier}>
+                    <option key={account.id} value={account.id}>
                       {account.identifier}
                     </option>
                   ))
