@@ -210,48 +210,65 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               Client Information
             </h2>
             <div className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-500">Name</label>
-                <p className="font-medium">{order.clientName}</p>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">Name:</span>
+                <span className="text-gray-900">{order.clientName}</span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Email</label>
-                <p className="font-medium">{order.clientEmail}</p>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Email:
+                </span>
+                <span className="text-gray-900">{order.clientEmail}</span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Client ID</label>
-                <p className="font-medium">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Client ID:
+                </span>
+                <span className="text-gray-900">
                   {order.clientDocumentNumber || "Not specified"}
-                </p>
+                </span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Client Country</label>
-                <p className="font-medium">{order.clientCountry}</p>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Client Country:
+                </span>
+                <span className="text-gray-900">{order.clientCountry}</span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Phone</label>
-                {order.clientPhone.map((phone: string, index: number) => (
-                  <p key={index} className="font-medium">
-                    {phone}
-                  </p>
-                ))}
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Phone:
+                </span>
+                <span className="text-gray-900">
+                  {order.clientPhone.map((phone: string, index: number) => (
+                    <span key={index}>
+                      {phone}
+                      {index < order.clientPhone.length - 1 && ", "}
+                    </span>
+                  ))}
+                </span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Guests</label>
-                <p className="font-medium">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Guests:
+                </span>
+                <span className="text-gray-900">
                   {order.guests.adults} adults, {order.guests.children.length}{" "}
                   children
-                </p>
-                {order.guests.children.length > 0 && (
-                  <p className="text-sm text-gray-500">
-                    Children age:{" "}
+                </span>
+              </div>
+              {order.guests.children.length > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-500">
+                    Children age:
+                  </span>
+                  <span className="text-gray-900">
                     {order.guests.children
                       .map((child: Guest) => child.age)
                       .join(", ")}{" "}
                     years
-                  </p>
-                )}
-              </div>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
