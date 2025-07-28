@@ -303,19 +303,21 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </span>
               </div>
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Deposit</h3>
                 <div className="flex justify-between items-center">
-                  <span
-                    className={`px-2 py-1 rounded text-sm ${
-                      order.payments.deposit.status === "paid"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {order.payments.deposit.status === "paid"
-                      ? "Paid"
-                      : "Not paid"}
-                  </span>
+                  <h3 className="font-semibold">Deposit</h3>
+                  <div className="flex-1 flex justify-center">
+                    <span
+                      className={`px-2 py-1 rounded text-sm ${
+                        order.payments.deposit.status === "paid"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {order.payments.deposit.status === "paid"
+                        ? "Paid"
+                        : "Not paid"}
+                    </span>
+                  </div>
                   <span className="font-medium">
                     {formatMoney(order.payments.deposit.amount)}
                   </span>
@@ -328,19 +330,21 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 )}
               </div>
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Balance</h3>
                 <div className="flex justify-between items-center">
-                  <span
-                    className={`px-2 py-1 rounded text-sm ${
-                      order.payments.balance.status === "paid"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {order.payments.balance.status === "paid"
-                      ? "Paid"
-                      : "Not paid"}
-                  </span>
+                  <h3 className="font-semibold">Balance</h3>
+                  <div className="flex-1 flex justify-center">
+                    <span
+                      className={`px-2 py-1 rounded text-sm ${
+                        order.payments.balance.status === "paid"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {order.payments.balance.status === "paid"
+                        ? "Paid"
+                        : "Not paid"}
+                    </span>
+                  </div>
                   <span className="font-medium">
                     {formatMoney(order.payments.balance.amount)}
                   </span>
