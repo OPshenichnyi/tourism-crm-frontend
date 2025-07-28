@@ -97,10 +97,10 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Замовлення #{order.reservationNumber}
+                Order #{order.reservationNumber}
               </h1>
               <p className="text-sm text-gray-500">
-                Створено: {formatDate(order.createdAt)}
+                Created: {formatDate(order.createdAt)}
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -203,7 +203,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                     Discount:
                   </span>
                   <span className="text-green-600 font-medium">
-                    {order.discount}%
+                    {formatMoney(order.discount)}
                   </span>
                 </div>
               )}
