@@ -454,11 +454,18 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
         {/* Action Buttons */}
         <div className="mt-8 flex justify-end gap-4">
           <button
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            className={`font-semibold py-3 px-6 rounded-lg transition-colors ${
+              order.statusOrder === "approved"
+                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
             onClick={() => {
-              // TODO: Implement voucher download functionality
-              console.log("Download voucher clicked");
+              if (order.statusOrder === "approved") {
+                // TODO: Implement voucher download functionality
+                console.log("Download voucher clicked");
+              }
             }}
+            disabled={order.statusOrder !== "approved"}
           >
             Download voucher
           </button>
