@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/app/components/common/DashboardLayout";
 import apiService from "@/app/services/apiService";
 import { format } from "date-fns";
-import { uk } from "date-fns/locale";
 import Link from "next/link";
 import { OrderDetails } from "@/app/types/order";
 
@@ -90,7 +89,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   };
 
   const formatDate = (date: string) => {
-    return format(new Date(date), "d MMMM yyyy", { locale: uk });
+    return format(new Date(date), "dd.MM.yyyy");
   };
 
   const formatMoney = (amount: number) => {
@@ -273,16 +272,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </span>
                 <span className="text-gray-900">{order.cityTravel}</span>
               </div>
-              {order.discount > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-500">
-                    Discount:
-                  </span>
-                  <span className="text-green-600 font-medium">
-                    {order.discount}%
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -380,7 +369,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                     Discount:
                   </span>
                   <span className="text-green-600 font-medium">
-                    {order.discount}%
+                    {formatMoney(order.discount)}
                   </span>
                 </div>
               )}
