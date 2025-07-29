@@ -382,8 +382,26 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </span>
               </div>
               <div className="border-t pt-4">
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center">
                   <h3 className="font-semibold">Deposit</h3>
+                  <div className="flex-1 flex justify-center">
+                    <span
+                      className={`px-2 py-1 rounded text-sm ${
+                        order.payments.deposit.status === "paid"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {order.payments.deposit.status === "paid"
+                        ? "Paid"
+                        : "Not paid"}
+                    </span>
+                  </div>
+                  <span className="font-medium">
+                    {formatMoney(order.payments.deposit.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-end mt-2">
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() =>
@@ -394,7 +412,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       }
                       className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
                     >
-                      Оплачено
+                      Paid
                     </button>
                     <button
                       onClick={() =>
@@ -405,25 +423,9 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       }
                       className="px-3 py-1 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
                     >
-                      Не оплачено
+                      Not paid
                     </button>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span
-                    className={`px-2 py-1 rounded text-sm ${
-                      order.payments.deposit.status === "paid"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {order.payments.deposit.status === "paid"
-                      ? "Оплачено"
-                      : "Не оплачено"}
-                  </span>
-                  <span className="font-medium">
-                    {formatMoney(order.payments.deposit.amount)}
-                  </span>
                 </div>
                 {order.payments.deposit.payment_methods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
@@ -433,8 +435,26 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 )}
               </div>
               <div className="border-t pt-4">
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center">
                   <h3 className="font-semibold">Balance</h3>
+                  <div className="flex-1 flex justify-center">
+                    <span
+                      className={`px-2 py-1 rounded text-sm ${
+                        order.payments.balance.status === "paid"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {order.payments.balance.status === "paid"
+                        ? "Paid"
+                        : "Not paid"}
+                    </span>
+                  </div>
+                  <span className="font-medium">
+                    {formatMoney(order.payments.balance.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-end mt-2">
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() =>
@@ -445,7 +465,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       }
                       className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
                     >
-                      Оплачено
+                      Paid
                     </button>
                     <button
                       onClick={() =>
@@ -456,25 +476,9 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       }
                       className="px-3 py-1 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
                     >
-                      Не оплачено
+                      Not paid
                     </button>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span
-                    className={`px-2 py-1 rounded text-sm ${
-                      order.payments.balance.status === "paid"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {order.payments.balance.status === "paid"
-                      ? "Оплачено"
-                      : "Не оплачено"}
-                  </span>
-                  <span className="font-medium">
-                    {formatMoney(order.payments.balance.amount)}
-                  </span>
                 </div>
                 {order.payments.balance.payment_methods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
