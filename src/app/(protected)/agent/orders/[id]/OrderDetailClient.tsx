@@ -88,7 +88,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Повернутись до списку замовлень
+            Return to orders list
           </Link>
         </div>
 
@@ -114,10 +114,10 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 }`}
               >
                 {order.statusOrder === "paid"
-                  ? "Оплачено"
+                  ? "Paid"
                   : order.statusOrder === "unpaid"
-                  ? "Не оплачено"
-                  : "Підтверджено"}
+                  ? "Unpaid"
+                  : "Approved"}
               </span>
             </div>
           </div>
@@ -371,6 +371,25 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-8 flex justify-end gap-4">
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            onClick={() => {
+              // TODO: Implement voucher download functionality
+              console.log("Download voucher clicked");
+            }}
+          >
+            Download voucher
+          </button>
+          <Link
+            href={`/agent/orders/${orderId}/edit`}
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          >
+            Edit order
+          </Link>
         </div>
       </div>
     </DashboardLayout>
