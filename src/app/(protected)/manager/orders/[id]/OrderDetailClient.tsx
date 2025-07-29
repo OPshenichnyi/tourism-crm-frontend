@@ -205,85 +205,82 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           </div>
         </div>
 
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Agent Information */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Agent Information
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm font-medium text-gray-500">
-                  Agent Name:
-                </span>
-                <p className="text-gray-900">{order.agentName}</p>
-              </div>
+        {/* Agent Information - Moved to top */}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-gray-500 mr-2">
+                Agent Name:
+              </span>
+              <span className="text-gray-900 font-medium">
+                {order.agentName}
+              </span>
             </div>
           </div>
+        </div>
 
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Travel Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">
               Travel Information
             </h2>
             <div className="space-y-3">
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Check-in:
                 </span>
-                <p className="text-gray-900">{formatDate(order.checkIn)}</p>
+                <span className="text-gray-900">
+                  {formatDate(order.checkIn)}
+                </span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Check-out:
                 </span>
-                <p className="text-gray-900">{formatDate(order.checkOut)}</p>
+                <span className="text-gray-900">
+                  {formatDate(order.checkOut)}
+                </span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Nights:
                 </span>
-                <p className="text-gray-900">{order.nights}</p>
+                <span className="text-gray-900">{order.nights}</span>
               </div>
-              <div>
-                <span className="text-sm font-medium text-gray-500">
-                  Client Country:
-                </span>
-                <p className="text-gray-900">{order.clientCountry}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-500">
-                  Country of Travel:
-                </span>
-                <p className="text-gray-900">{order.countryTravel}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-500">
-                  City of Travel:
-                </span>
-                <p className="text-gray-900">{order.cityTravel}</p>
-              </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Property Name:
                 </span>
-                <p className="text-gray-900">{order.propertyName}</p>
+                <span className="text-gray-900">{order.propertyName}</span>
               </div>
-              <div>
+              <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   Property Number:
                 </span>
-                <p className="text-gray-900">{order.propertyNumber}</p>
+                <span className="text-gray-900">{order.propertyNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Country of Travel:
+                </span>
+                <span className="text-gray-900">{order.countryTravel}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  City of Travel:
+                </span>
+                <span className="text-gray-900">{order.cityTravel}</span>
               </div>
               {order.discount > 0 && (
-                <div>
+                <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-500">
                     Discount:
                   </span>
-                  <p className="text-green-600 font-medium">
+                  <span className="text-green-600 font-medium">
                     {order.discount}%
-                  </p>
+                  </span>
                 </div>
               )}
             </div>
@@ -292,69 +289,112 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           {/* Client Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Інформація про клієнта
+              Client Information
             </h2>
             <div className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-500">Ім&apos;я</label>
-                <p className="font-medium">{order.clientName}</p>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">Name:</span>
+                <span className="text-gray-900">{order.clientName}</span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Email</label>
-                <p className="font-medium">{order.clientEmail}</p>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Email:
+                </span>
+                <span className="text-gray-900">{order.clientEmail}</span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Телефон</label>
-                {order.clientPhone.map((phone, index) => (
-                  <p key={index} className="font-medium">
-                    {phone}
-                  </p>
-                ))}
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Client ID:
+                </span>
+                <span className="text-gray-900">
+                  {order.clientDocumentNumber || "Not specified"}
+                </span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Гості</label>
-                <p className="font-medium">
-                  {order.guests.adults} дорослих, {order.guests.children.length}{" "}
-                  дітей
-                </p>
-                {order.guests.children.length > 0 && (
-                  <p className="text-sm text-gray-500">
-                    Вік дітей:{" "}
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Client Country:
+                </span>
+                <span className="text-gray-900">{order.clientCountry}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Phone:
+                </span>
+                <span className="text-gray-900">
+                  {order.clientPhone.map((phone: string, index: number) => (
+                    <span key={index}>
+                      {phone}
+                      {index < order.clientPhone.length - 1 && ", "}
+                    </span>
+                  ))}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Guests:
+                </span>
+                <span className="text-gray-900">
+                  {order.guests.adults} adults, {order.guests.children.length}{" "}
+                  children
+                </span>
+              </div>
+              {order.guests.children.length > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-500">
+                    Children age:
+                  </span>
+                  <span className="text-gray-900">
                     {order.guests.children.map((child) => child.age).join(", ")}{" "}
-                    років
-                  </p>
-                )}
-              </div>
+                    years
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Payment Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Інформація про оплату
+              Payment Information
             </h2>
             <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-500">Офіційна ціна</label>
-                <p className="font-medium">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Official price:
+                </span>
+                <span className="text-gray-900">
                   {formatMoney(order.officialPrice)}
-                </p>
+                </span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">
-                  Збір за прибирання
-                </label>
-                <p className="font-medium">{formatMoney(order.taxClean)}</p>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Cleaning fee:
+                </span>
+                <span className="text-gray-900">
+                  {formatMoney(order.taxClean)}
+                </span>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Загальна сума</label>
-                <p className="text-xl font-bold text-blue-600">
+              {order.discount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-500">
+                    Discount:
+                  </span>
+                  <span className="text-green-600 font-medium">
+                    {order.discount}%
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  Total amount:
+                </span>
+                <span className="text-xl font-bold text-blue-600">
                   {formatMoney(order.totalPrice)}
-                </p>
+                </span>
               </div>
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold">Депозит</h3>
+                  <h3 className="font-semibold">Deposit</h3>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() =>
@@ -398,14 +438,14 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </div>
                 {order.payments.deposit.payment_methods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Способи оплати:{" "}
+                    Payment methods:{" "}
                     {order.payments.deposit.payment_methods.join(", ")}
                   </p>
                 )}
               </div>
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold">Баланс</h3>
+                  <h3 className="font-semibold">Balance</h3>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() =>
@@ -449,7 +489,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </div>
                 {order.payments.balance.payment_methods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Способи оплати:{" "}
+                    Payment methods:{" "}
                     {order.payments.balance.payment_methods.join(", ")}
                   </p>
                 )}

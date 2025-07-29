@@ -6,22 +6,31 @@ import apiService from "@/app/services/apiService";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
 import { OrderDetails, Guest } from "@/app/types/order";
-import { use } from "react";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function OrderDetailsPage({ params }: PageProps) {
-  const { id } = use(Promise.resolve(params));
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
+    const getOrderId = async () => {
+      const { id } = await params;
+      setOrderId(id);
+    };
+    getOrderId();
+  }, [params]);
+
+  useEffect(() => {
+    if (!orderId) return;
+
     const fetchOrder = async () => {
       try {
-        const response = await apiService.orders.getById(id);
+        const response = await apiService.orders.getById(orderId);
         setOrder(response.order);
       } catch (err) {
         console.error("Error fetching order:", err);
@@ -32,7 +41,7 @@ export default function OrderDetailsPage({ params }: PageProps) {
     };
 
     fetchOrder();
-  }, [id]);
+  }, [orderId]);
 
   const formatDate = (date: string) => {
     return format(new Date(date), "d MMMM yyyy", { locale: uk });
