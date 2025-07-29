@@ -662,6 +662,18 @@ const apiService = {
       }
     },
 
+    // Get bank account by ID
+    getById: async (id: string): Promise<BankAccountResponse> => {
+      setAuthToken();
+      try {
+        const response = await api.get(`/api/bank-accounts/${id}`);
+        return response.data;
+      } catch (error) {
+        console.error("Get bank account by ID API error:", error);
+        throw error;
+      }
+    },
+
     // Create a new bank account
     create: async (
       data: CreateBankAccountData

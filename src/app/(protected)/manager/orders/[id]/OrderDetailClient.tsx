@@ -6,6 +6,7 @@ import apiService from "@/app/services/apiService";
 import { format } from "date-fns";
 import Link from "next/link";
 import { OrderDetails } from "@/app/types/order";
+import { BankAccount } from "@/app/types/bankAccount";
 
 interface OrderDetailClientProps {
   orderId: string;
@@ -13,9 +14,11 @@ interface OrderDetailClientProps {
 
 export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const [order, setOrder] = useState<OrderDetails | null>(null);
+  const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [bankAccountLoading, setBankAccountLoading] = useState(false);
 
   const fetchOrder = async () => {
     try {
@@ -29,9 +32,30 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     }
   };
 
+  const fetchBankAccount = async (bankAccountId: string) => {
+    if (!bankAccountId) return;
+
+    setBankAccountLoading(true);
+    try {
+      const response = await apiService.bankAccounts.getById(bankAccountId);
+      setBankAccount(response.data);
+    } catch (err) {
+      console.error("Error fetching bank account:", err);
+      // Don't set error for bank account as it's not critical
+    } finally {
+      setBankAccountLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchOrder();
   }, [orderId]);
+
+  useEffect(() => {
+    if (order?.bankAccount) {
+      fetchBankAccount(order.bankAccount);
+    }
+  }, [order?.bankAccount]);
 
   const handleStatusUpdate = async (
     newStatus: "approve" | "paid" | "unpaid"
@@ -472,10 +496,64 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               Банківські реквізити
             </h2>
             <div className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-500">Рахунок</label>
-                <p className="font-medium break-all">{order.bankAccount}</p>
-              </div>
+              {bankAccountLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                </div>
+              ) : bankAccount ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">
+                      Bank Name:
+                    </span>
+                    <span className="text-gray-900">
+                      {bankAccount.bankName}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">
+                      Swift & BIC:
+                    </span>
+                    <span className="text-gray-900">{bankAccount.swift}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">
+                      IBAN:
+                    </span>
+                    <span className="text-gray-900 font-mono">
+                      {bankAccount.iban}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-500">
+                      Holder (Beneficiary):
+                    </span>
+                    <span className="text-gray-900">
+                      {bankAccount.holderName}
+                    </span>
+                  </div>
+                  {bankAccount.address && (
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-500">
+                        Address:
+                      </span>
+                      <span className="text-gray-900">
+                        {bankAccount.address}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-sm text-gray-500">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Рахунок:</span>
+                    <span className="break-all">{order?.bankAccount}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Детальна інформація недоступна
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
