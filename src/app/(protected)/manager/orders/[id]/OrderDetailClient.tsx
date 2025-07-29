@@ -144,7 +144,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Повернутись до списку замовлень
+            Return to order list
           </Link>
         </div>
 
@@ -153,10 +153,10 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Замовлення #{order.reservationNumber}
+                Order #{order.reservationNumber}
               </h1>
               <p className="text-sm text-gray-500">
-                Створено: {formatDate(order.createdAt)}
+                Created: {formatDate(order.createdAt)}
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -171,35 +171,11 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 }`}
               >
                 {order.statusOrder === "paid"
-                  ? "Оплачено"
+                  ? "Paid"
                   : order.statusOrder === "unpaid"
-                  ? "Не оплачено"
-                  : "Підтверджено"}
+                  ? "Not paid"
+                  : "Approved"}
               </span>
-
-              {/* Action Buttons */}
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleStatusUpdate("approve")}
-                  disabled={isUpdating || order.statusOrder === "approve"}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  Підтвердити
-                </button>
-                <button
-                  onClick={() => handleStatusUpdate("paid")}
-                  disabled={isUpdating || order.statusOrder === "paid"}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-                >
-                  Позначити як оплачене
-                </button>
-                <Link
-                  href={`/manager/orders/${order.id}/edit`}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                >
-                  Редагувати
-                </Link>
-              </div>
             </div>
           </div>
         </div>
@@ -502,6 +478,30 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-8 flex justify-end space-x-2">
+          <button
+            onClick={() => handleStatusUpdate("approve")}
+            disabled={isUpdating || order.statusOrder === "approve"}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+          >
+            Confirm reservation
+          </button>
+          <button
+            onClick={() => handleStatusUpdate("paid")}
+            disabled={isUpdating || order.statusOrder === "paid"}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+          >
+            Download voucher
+          </button>
+          <Link
+            href={`/manager/orders/${order.id}/edit`}
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+          >
+            Edit order
+          </Link>
         </div>
       </div>
     </DashboardLayout>
