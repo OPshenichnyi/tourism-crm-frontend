@@ -51,7 +51,7 @@ export interface OrderDetails {
   totalPrice: number;
   bankAccount: string;
   payments: Payments;
-  statusOrder: "approve" | "unpaid" | "paid";
+  statusOrder: "pending" | "approved" | "rejected";
   createdAt: string;
   updatedAt: string;
   agent: Agent;

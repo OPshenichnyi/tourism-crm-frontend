@@ -186,7 +186,7 @@ interface LoginResponse {
 
 interface ExportParams {
   orderIds?: string[];
-  status?: "approve" | "unpaid" | "paid";
+  status?: "pending" | "approved" | "rejected";
   search?: string;
   agentId?: string;
   dateFrom?: string;
@@ -246,7 +246,7 @@ interface OrderDetails {
   totalPrice: number;
   bankAccount: string;
   payments: Payments;
-  statusOrder: "approve" | "unpaid" | "paid";
+  statusOrder: "pending" | "approved" | "rejected";
   createdAt: string;
   updatedAt: string;
   agent: {

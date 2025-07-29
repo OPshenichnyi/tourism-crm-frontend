@@ -93,18 +93,18 @@ export default function OrderDetailsPage({ params }: PageProps) {
             <div className="flex items-center space-x-2">
               <span
                 className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  order.statusOrder === "paid"
+                  order.statusOrder === "approved"
                     ? "bg-green-100 text-green-800"
-                    : order.statusOrder === "unpaid"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-blue-100 text-blue-800"
+                    : order.statusOrder === "rejected"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-orange-100 text-orange-800"
                 }`}
               >
-                {order.statusOrder === "paid"
-                  ? "Оплачено"
-                  : order.statusOrder === "unpaid"
-                  ? "Не оплачено"
-                  : "Підтверджено"}
+                {order.statusOrder === "approved"
+                  ? "Підтверджено"
+                  : order.statusOrder === "rejected"
+                  ? "Відхилено"
+                  : "Очікування резервації"}
               </span>
             </div>
           </div>

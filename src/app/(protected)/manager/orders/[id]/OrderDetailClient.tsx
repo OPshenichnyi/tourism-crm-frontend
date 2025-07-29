@@ -57,18 +57,13 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     }
   }, [order?.bankAccount]);
 
-  const handleStatusUpdate = async (
-    newStatus: "approve" | "paid" | "unpaid"
-  ) => {
-    if (!order || isUpdating) return;
-
+  const handleStatusUpdate = async (newStatus: "approved" | "rejected") => {
     setIsUpdating(true);
     try {
-      await apiService.orders.updateStatus(order.id, newStatus);
-      await fetchOrder();
-    } catch (err) {
-      console.error("Error updating order status:", err);
-      setError("Failed to update order status");
+      await apiService.orders.updateStatus(orderId, newStatus);
+      await fetchOrder(); // Refresh order data
+    } catch (error) {
+      console.error("Error updating order status:", error);
     } finally {
       setIsUpdating(false);
     }
@@ -187,18 +182,18 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               {/* Status Badge */}
               <span
                 className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  order.statusOrder === "paid"
+                  order.statusOrder === "approved"
                     ? "bg-green-100 text-green-800"
-                    : order.statusOrder === "unpaid"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-blue-100 text-blue-800"
+                    : order.statusOrder === "rejected"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-orange-100 text-orange-800"
                 }`}
               >
-                {order.statusOrder === "paid"
-                  ? "Paid"
-                  : order.statusOrder === "unpaid"
-                  ? "Not paid"
-                  : "Approved"}
+                {order.statusOrder === "approved"
+                  ? "Approved"
+                  : order.statusOrder === "rejected"
+                  ? "Rejected"
+                  : "Reservation pending"}
               </span>
             </div>
           </div>
@@ -561,18 +556,18 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
         {/* Action Buttons */}
         <div className="mt-8 flex justify-end space-x-2">
           <button
-            onClick={() => handleStatusUpdate("approve")}
-            disabled={isUpdating || order.statusOrder === "approve"}
+            onClick={() => handleStatusUpdate("approved")}
+            disabled={isUpdating || order.statusOrder === "approved"}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
             Confirm reservation
           </button>
           <button
-            onClick={() => handleStatusUpdate("paid")}
-            disabled={isUpdating || order.statusOrder === "paid"}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+            onClick={() => handleStatusUpdate("rejected")}
+            disabled={isUpdating || order.statusOrder === "rejected"}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
           >
-            Download voucher
+            Reject reservation
           </button>
           <Link
             href={`/manager/orders/${order.id}/edit`}

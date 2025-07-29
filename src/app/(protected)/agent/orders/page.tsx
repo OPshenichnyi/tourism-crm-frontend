@@ -60,7 +60,7 @@ interface Order {
   totalPrice: number;
   bankAccount: string;
   payments: Payments;
-  statusOrder: "approve" | "unpaid" | "paid";
+  statusOrder: "pending" | "approved" | "rejected";
   createdAt: string;
   updatedAt: string;
   agent: Agent;
@@ -544,15 +544,18 @@ export default function AgentOrdersPage() {
                         <span
                           className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                           ${
-                            order.statusOrder === "unpaid"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : order.statusOrder === "paid"
+                            order.statusOrder === "approved"
                               ? "bg-green-100 text-green-800"
-                              : "bg-blue-100 text-blue-800"
+                              : order.statusOrder === "rejected"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-orange-100 text-orange-800"
                           }`}
                         >
-                          {order.statusOrder.charAt(0).toUpperCase() +
-                            order.statusOrder.slice(1)}
+                          {order.statusOrder === "approved"
+                            ? "Approved"
+                            : order.statusOrder === "rejected"
+                            ? "Rejected"
+                            : "Reservation pending"}
                         </span>
                         <span className="text-xs text-gray-500">
                           Deposit: {order.payments.deposit.status}
