@@ -621,11 +621,11 @@ const apiService = {
     },
 
     // Update order status
-    updateStatus: async (orderId: string, status: string) => {
+    updateStatus: async (orderId: string, status: "approved" | "rejected") => {
       setAuthToken();
       try {
-        const response = await api.patch(`/api/orders/${orderId}/status`, {
-          status,
+        const response = await api.put(`/api/orders/${orderId}`, {
+          statusOrder: status,
         });
         return response.data;
       } catch (error) {

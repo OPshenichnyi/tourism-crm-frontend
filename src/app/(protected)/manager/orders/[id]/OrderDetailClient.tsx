@@ -17,6 +17,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [bankAccountLoading, setBankAccountLoading] = useState(false);
 
@@ -59,11 +60,16 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
 
   const handleStatusUpdate = async (newStatus: "approved" | "rejected") => {
     setIsUpdating(true);
+    setError(null); // Clear any previous errors
     try {
+      // Use the updateStatus method which now uses the correct API endpoint
       await apiService.orders.updateStatus(orderId, newStatus);
       await fetchOrder(); // Refresh order data
+      setSuccess("Order status updated successfully!");
+      setTimeout(() => setSuccess(null), 3000); // Clear success message after 3 seconds
     } catch (error) {
       console.error("Error updating order status:", error);
+      setError("Failed to update order status");
     } finally {
       setIsUpdating(false);
     }
@@ -197,6 +203,20 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               </span>
             </div>
           </div>
+
+          {/* Success Message */}
+          {success && (
+            <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+              {success}
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
         </div>
 
         {/* Agent Information - Moved to top */}

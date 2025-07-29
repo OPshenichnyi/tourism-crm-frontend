@@ -249,7 +249,7 @@ export default function ManagerOrdersPage() {
     }
   };
 
-  const handleBulkStatusChange = async (newStatus: string) => {
+  const handleBulkStatusChange = async (newStatus: "approved" | "rejected") => {
     try {
       await Promise.all(
         selectedOrders.map((orderId) =>
@@ -333,16 +333,16 @@ export default function ManagerOrdersPage() {
           {selectedOrders.length > 0 && (
             <div className="flex gap-2">
               <button
-                onClick={() => handleBulkStatusChange("approve")}
+                onClick={() => handleBulkStatusChange("approved")}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Approve Selected
               </button>
               <button
-                onClick={() => handleBulkStatusChange("paid")}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                onClick={() => handleBulkStatusChange("rejected")}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
               >
-                Mark as Paid
+                Reject Selected
               </button>
             </div>
           )}
