@@ -1121,28 +1121,47 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
               >
                 Bank Account <span className="text-red-500">*</span>
               </label>
-              <select
-                id="bankAccount"
-                name="bankAccount"
-                value={formData.bankAccount}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border ${
-                  errors.bankAccount ? "border-red-500" : "border-gray-300"
-                } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-              >
-                <option value="">Select a bank account</option>
-                {bankAccountsLoading ? (
-                  <option value="">Loading bank accounts...</option>
-                ) : bankAccountsError ? (
-                  <option value="">{bankAccountsError}</option>
-                ) : (
-                  bankAccounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.identifier}
-                    </option>
-                  ))
-                )}
-              </select>
+              <div className="relative">
+                <select
+                  id="bankAccount"
+                  name="bankAccount"
+                  value={formData.bankAccount}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.bankAccount ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm cursor-pointer focus:outline-none focus:ring-blue-500 focus:border-blue-500 appearance-none ${
+                    formData.bankAccount ? "text-black" : "text-gray-500"
+                  }`}
+                >
+                  <option value="">Select a bank account</option>
+                  {bankAccountsLoading ? (
+                    <option value="">Loading bank accounts...</option>
+                  ) : bankAccountsError ? (
+                    <option value="">{bankAccountsError}</option>
+                  ) : (
+                    bankAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.identifier}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg
+                    className="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
               {errors.bankAccount && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.bankAccount}
