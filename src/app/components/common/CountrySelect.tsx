@@ -126,7 +126,7 @@ export default function CountrySelect({
                   className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
                   onClick={() => handleCountrySelect(country)}
                 >
-                  <span className="text-gray-900">{country.name}</span>
+                  <span className="text-black">{country.name}</span>
                   <span className="text-gray-500 text-sm">{country.code}</span>
                 </div>
               ))
