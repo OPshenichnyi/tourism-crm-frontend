@@ -332,24 +332,21 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                   <div className="flex-1 flex justify-center">
                     <span
                       className={`px-2 py-1 rounded text-sm ${
-                        order.payments.deposit.status === "paid"
+                        order.depositStatus === "paid"
                           ? "bg-green-100 text-green-800"
                           : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
-                      {order.payments.deposit.status === "paid"
-                        ? "Paid"
-                        : "Not paid"}
+                      {order.depositStatus === "paid" ? "Paid" : "Not paid"}
                     </span>
                   </div>
                   <span className="font-medium">
-                    {formatMoney(order.payments.deposit.amount)}
+                    {formatMoney(order.depositAmount)}
                   </span>
                 </div>
-                {order.payments.deposit.payment_methods.length > 0 && (
+                {order.depositPaymentMethods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Payment methods:{" "}
-                    {order.payments.deposit.payment_methods.join(", ")}
+                    Payment methods: {order.depositPaymentMethods.join(", ")}
                   </p>
                 )}
               </div>
@@ -359,24 +356,21 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                   <div className="flex-1 flex justify-center">
                     <span
                       className={`px-2 py-1 rounded text-sm ${
-                        order.payments.balance.status === "paid"
+                        order.balanceStatus === "paid"
                           ? "bg-green-100 text-green-800"
                           : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
-                      {order.payments.balance.status === "paid"
-                        ? "Paid"
-                        : "Not paid"}
+                      {order.balanceStatus === "paid" ? "Paid" : "Not paid"}
                     </span>
                   </div>
                   <span className="font-medium">
-                    {formatMoney(order.payments.balance.amount)}
+                    {formatMoney(order.balanceAmount)}
                   </span>
                 </div>
-                {order.payments.balance.payment_methods.length > 0 && (
+                {order.balancePaymentMethods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Payment methods:{" "}
-                    {order.payments.balance.payment_methods.join(", ")}
+                    Payment methods: {order.balancePaymentMethods.join(", ")}
                   </p>
                 )}
               </div>

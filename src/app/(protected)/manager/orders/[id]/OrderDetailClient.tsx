@@ -79,32 +79,33 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     paymentType: "deposit" | "balance",
     newStatus: "paid" | "unpaid"
   ) => {
-    if (!order || isUpdating) return;
+    console.log("handlePaymentStatusUpdate called:", {
+      paymentType,
+      newStatus,
+    });
+
+    if (!order || isUpdating) {
+      console.log("Early return:", { order: !!order, isUpdating });
+      return;
+    }
 
     setIsUpdating(true);
+    setError(null); // Clear any previous errors
     try {
-      const updatedOrder = {
-        payments: {
-          deposit:
-            paymentType === "deposit"
-              ? {
-                  status: newStatus,
-                  payment_methods: order.payments.deposit.payment_methods,
-                  amount: order.payments.deposit.amount,
-                }
-              : order.payments.deposit,
-          balance:
-            paymentType === "balance"
-              ? {
-                  status: newStatus,
-                  payment_methods: order.payments.balance.payment_methods,
-                  amount: order.payments.balance.amount,
-                }
-              : order.payments.balance,
-        },
+      // Use the new backend structure
+      const updateData = {
+        [`${paymentType}Status`]: newStatus,
       };
-      await apiService.orders.update(order.id, updatedOrder);
-      await fetchOrder();
+
+      console.log("Sending update data:", updateData);
+
+      await apiService.orders.update(
+        order.id,
+        (updateData as unknown) as Partial<OrderDetails>
+      );
+      await fetchOrder(); // Refresh order data
+      setSuccess("Payment status updated successfully!");
+      setTimeout(() => setSuccess(null), 3000); // Clear success message after 3 seconds
     } catch (err) {
       console.error("Error updating payment status:", err);
       setError("Failed to update payment status");
@@ -402,18 +403,16 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                   <div className="flex-1 flex justify-center">
                     <span
                       className={`px-2 py-1 rounded text-sm ${
-                        order.payments.deposit.status === "paid"
+                        order.depositStatus === "paid"
                           ? "bg-green-100 text-green-800"
                           : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
-                      {order.payments.deposit.status === "paid"
-                        ? "Paid"
-                        : "Not paid"}
+                      {order.depositStatus === "paid" ? "Paid" : "Not paid"}
                     </span>
                   </div>
                   <span className="font-medium">
-                    {formatMoney(order.payments.deposit.amount)}
+                    {formatMoney(order.depositAmount)}
                   </span>
                 </div>
                 <div className="flex justify-end mt-2">
@@ -422,9 +421,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       onClick={() =>
                         handlePaymentStatusUpdate("deposit", "paid")
                       }
-                      disabled={
-                        isUpdating || order.payments.deposit.status === "paid"
-                      }
+                      disabled={isUpdating || order.depositStatus === "paid"}
                       className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
                     >
                       Paid
@@ -433,19 +430,16 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       onClick={() =>
                         handlePaymentStatusUpdate("deposit", "unpaid")
                       }
-                      disabled={
-                        isUpdating || order.payments.deposit.status === "unpaid"
-                      }
+                      disabled={isUpdating || order.depositStatus === "unpaid"}
                       className="px-3 py-1 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
                     >
                       Not paid
                     </button>
                   </div>
                 </div>
-                {order.payments.deposit.payment_methods.length > 0 && (
+                {order.depositPaymentMethods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Payment methods:{" "}
-                    {order.payments.deposit.payment_methods.join(", ")}
+                    Payment methods: {order.depositPaymentMethods.join(", ")}
                   </p>
                 )}
               </div>
@@ -455,18 +449,16 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                   <div className="flex-1 flex justify-center">
                     <span
                       className={`px-2 py-1 rounded text-sm ${
-                        order.payments.balance.status === "paid"
+                        order.balanceStatus === "paid"
                           ? "bg-green-100 text-green-800"
                           : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
-                      {order.payments.balance.status === "paid"
-                        ? "Paid"
-                        : "Not paid"}
+                      {order.balanceStatus === "paid" ? "Paid" : "Not paid"}
                     </span>
                   </div>
                   <span className="font-medium">
-                    {formatMoney(order.payments.balance.amount)}
+                    {formatMoney(order.balanceAmount)}
                   </span>
                 </div>
                 <div className="flex justify-end mt-2">
@@ -475,9 +467,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       onClick={() =>
                         handlePaymentStatusUpdate("balance", "paid")
                       }
-                      disabled={
-                        isUpdating || order.payments.balance.status === "paid"
-                      }
+                      disabled={isUpdating || order.balanceStatus === "paid"}
                       className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
                     >
                       Paid
@@ -486,19 +476,16 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       onClick={() =>
                         handlePaymentStatusUpdate("balance", "unpaid")
                       }
-                      disabled={
-                        isUpdating || order.payments.balance.status === "unpaid"
-                      }
+                      disabled={isUpdating || order.balanceStatus === "unpaid"}
                       className="px-3 py-1 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
                     >
                       Not paid
                     </button>
                   </div>
                 </div>
-                {order.payments.balance.payment_methods.length > 0 && (
+                {order.balancePaymentMethods.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Payment methods:{" "}
-                    {order.payments.balance.payment_methods.join(", ")}
+                    Payment methods: {order.balancePaymentMethods.join(", ")}
                   </p>
                 )}
               </div>

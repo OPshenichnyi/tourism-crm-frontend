@@ -50,7 +50,17 @@ export interface OrderDetails {
   taxClean: number;
   totalPrice: number;
   bankAccount: string;
-  payments: Payments;
+  // New payment structure
+  depositAmount: number;
+  depositStatus: "paid" | "unpaid";
+  depositDueDate?: string;
+  depositPaymentMethods: ("cash" | "bank" | "revolut")[];
+  balanceAmount: number;
+  balanceStatus: "paid" | "unpaid";
+  balanceDueDate?: string;
+  balancePaymentMethods: ("cash" | "bank" | "revolut")[];
+  // Legacy payments structure for backward compatibility
+  payments?: Payments;
   statusOrder: "pending" | "approved" | "rejected";
   createdAt: string;
   updatedAt: string;

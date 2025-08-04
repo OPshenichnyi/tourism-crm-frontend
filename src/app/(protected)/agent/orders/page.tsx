@@ -59,7 +59,17 @@ interface Order {
   taxClean: number;
   totalPrice: number;
   bankAccount: string;
-  payments: Payments;
+  // New payment structure
+  depositAmount: number;
+  depositStatus: "paid" | "unpaid";
+  depositDueDate?: string;
+  depositPaymentMethods: ("cash" | "bank" | "revolut")[];
+  balanceAmount: number;
+  balanceStatus: "paid" | "unpaid";
+  balanceDueDate?: string;
+  balancePaymentMethods: ("cash" | "bank" | "revolut")[];
+  // Legacy payments structure for backward compatibility
+  payments?: Payments;
   statusOrder: "pending" | "approved" | "rejected";
   createdAt: string;
   updatedAt: string;
@@ -482,7 +492,7 @@ export default function AgentOrdersPage() {
                   <tr
                     key={order.id}
                     className={
-                      order.payments.balance.status === "unpaid" &&
+                      order.balanceStatus === "unpaid" &&
                       new Date(order.checkIn) <
                         new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
                         ? "bg-yellow-50"
@@ -558,10 +568,10 @@ export default function AgentOrdersPage() {
                             : "Reservation pending"}
                         </span>
                         <span className="text-xs text-gray-500">
-                          Deposit: {order.payments.deposit.status}
+                          Deposit: {order.depositStatus || "N/A"}
                         </span>
                         <span className="text-xs text-gray-500">
-                          Balance: {order.payments.balance.status}
+                          Balance: {order.balanceStatus || "N/A"}
                         </span>
                       </div>
                     </td>
