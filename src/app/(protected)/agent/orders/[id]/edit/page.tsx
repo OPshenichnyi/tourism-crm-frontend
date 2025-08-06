@@ -39,6 +39,9 @@ interface OrderFormData {
   taxClean: number | null;
   totalPrice: number | null;
   bankAccount: string;
+  // Payment information
+  depositAmount: number | null;
+  balanceAmount: number | null;
 }
 
 export default function EditOrderPage({ params }: EditOrderPageProps) {
@@ -75,6 +78,9 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     taxClean: null,
     totalPrice: null,
     bankAccount: "",
+    // Payment information
+    depositAmount: null,
+    balanceAmount: null,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -206,6 +212,9 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
           taxClean: orderData.taxClean,
           totalPrice: orderData.totalPrice,
           bankAccount: bankAccountId,
+          // Payment information
+          depositAmount: orderData.depositAmount,
+          balanceAmount: orderData.balanceAmount,
         });
 
         // Update order state with converted data
@@ -254,6 +263,17 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     }));
   }, [formData.officialPrice, formData.taxClean, formData.discount]);
 
+  // Calculate balance when deposit amount changes
+  useEffect(() => {
+    const totalPrice = formData.totalPrice || 0;
+    const depositAmount = formData.depositAmount || 0;
+
+    setFormData((prev) => ({
+      ...prev,
+      balanceAmount: totalPrice - depositAmount,
+    }));
+  }, [formData.totalPrice, formData.depositAmount]);
+
   // Handle input change
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -274,6 +294,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
       "taxClean",
       "totalPrice",
       "discount",
+      "depositAmount",
     ];
 
     if (numberFields.includes(name) && value) {
@@ -456,6 +477,20 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
       newErrors.bankAccount = "Bank account is required";
     }
 
+    // Validate payment information
+    if (formData.depositAmount === null || formData.depositAmount < 0) {
+      newErrors.depositAmount =
+        "Deposit amount is required and must be a positive number";
+    }
+    if (
+      formData.depositAmount &&
+      formData.totalPrice &&
+      formData.depositAmount > formData.totalPrice
+    ) {
+      newErrors.depositAmount =
+        "Deposit amount cannot be greater than total price";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -507,6 +542,9 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
         taxClean: formData.taxClean || undefined,
         totalPrice: formData.totalPrice || undefined,
         bankAccount: formData.bankAccount,
+        // Payment information
+        depositAmount: formData.depositAmount || undefined,
+        balanceAmount: formData.balanceAmount || undefined,
       };
 
       await apiService.orders.update(orderId, updateData);
@@ -1167,6 +1205,73 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
                   {errors.bankAccount}
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Information Section */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+            Payment Information
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="depositAmount"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Deposit Amount <span className="text-red-500">*</span>
+              </label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                  $
+                </span>
+                <input
+                  type="number"
+                  id="depositAmount"
+                  name="depositAmount"
+                  min="0"
+                  step="0.01"
+                  value={formData.depositAmount || ""}
+                  onChange={handleInputChange}
+                  className={`flex-1 px-3 py-2 border ${
+                    errors.depositAmount ? "border-red-500" : "border-gray-300"
+                  } rounded-r-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+              </div>
+              {errors.depositAmount && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.depositAmount}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="balanceAmount"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Balance Amount
+              </label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                  $
+                </span>
+                <input
+                  type="number"
+                  id="balanceAmount"
+                  name="balanceAmount"
+                  min="0"
+                  step="0.01"
+                  value={formData.balanceAmount || ""}
+                  readOnly
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md shadow-sm bg-gray-50"
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Automatically calculated: Total Price - Deposit Amount
+              </p>
             </div>
           </div>
         </div>

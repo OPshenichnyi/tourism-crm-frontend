@@ -87,12 +87,6 @@ interface Child {
   age: number;
 }
 
-interface OrderPayment {
-  status: "paid" | "unpaid";
-  amount: number | null;
-  payment_methods: ("cash" | "bank" | "revolut")[];
-}
-
 interface OrderFormData {
   agentName: string;
   checkIn: string;
@@ -117,10 +111,8 @@ interface OrderFormData {
   taxClean: number | null;
   totalPrice: number | null;
   bankAccount: string;
-  payments: {
-    deposit: OrderPayment;
-    balance: OrderPayment;
-  };
+  depositAmount: number | null;
+  balanceAmount: number | null;
 }
 
 interface UpdateProfileData {

@@ -535,22 +535,17 @@ export default function CreateOrderPage() {
 
     try {
       // Format the data according to API requirements
+      const { payments, ...formDataWithoutPayments } = formData;
+
       const baseData = {
-        ...formData,
-        payments: {
-          deposit: {
-            ...formData.payments.deposit,
-            payment_methods: formData.payments.deposit.paymentMethods,
-          },
-          balance: {
-            ...formData.payments.balance,
-            payment_methods: formData.payments.balance.paymentMethods,
-          },
-        },
+        ...formDataWithoutPayments,
+        // Extract deposit and balance amounts as separate fields
+        depositAmount: payments.deposit.amount,
+        balanceAmount: payments.balance.amount,
       };
 
-      // Create requestData - exclude clientEmail if it's empty
-      const requestData =
+      // Create final requestData - exclude clientEmail if it's empty
+      const finalRequestData =
         formData.clientEmail && formData.clientEmail.trim() !== ""
           ? baseData
           : Object.fromEntries(
@@ -558,8 +553,8 @@ export default function CreateOrderPage() {
             );
 
       // Call the API
-      console.log("Sending order data:", requestData);
-      await apiService.orders.create(requestData);
+      console.log("Sending order data:", finalRequestData);
+      await apiService.orders.create(finalRequestData);
 
       // Handle successful response
       setSubmitSuccess(true);
