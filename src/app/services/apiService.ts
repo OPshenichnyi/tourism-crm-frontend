@@ -5,6 +5,7 @@ import {
   BankAccountResponse,
   BankAccountsListResponse,
 } from "@/app/types/bankAccount";
+import { OrderDetails, OrderResponse } from "@/app/types/order";
 
 // Чітко вкажіть URL, який ви бачили в Postman
 const API_URL = "http://localhost:3000";
@@ -191,68 +192,6 @@ interface ExportParams {
   sortOrder?: "asc" | "desc";
   page?: number;
   limit?: number;
-}
-
-interface Guest {
-  age: number;
-}
-
-interface Guests {
-  adults: number;
-  children: Guest[];
-}
-
-interface Payment {
-  status: "paid" | "unpaid";
-  amount: number;
-  payment_methods: ("cash" | "bank" | "revolut")[];
-}
-
-interface Payments {
-  deposit: Payment;
-  balance: Payment;
-}
-
-interface OrderDetails {
-  id: string;
-  agentId: string;
-  createdOrder: string;
-  agentName: string;
-  checkIn: string;
-  checkOut: string;
-  nights: number;
-  clientCountry: string;
-  countryTravel: string;
-  cityTravel: string;
-  propertyName: string;
-  propertyNumber: string;
-  discount: number;
-  reservationNumber: string;
-  clientName: string;
-  clientPhone: string[];
-  clientEmail: string | null;
-  clientDocumentNumber?: string;
-  guests: Guests;
-  officialPrice: number;
-  taxClean: number;
-  totalPrice: number;
-  bankAccount: string;
-  payments: Payments;
-  statusOrder: "pending" | "approved" | "rejected";
-  createdAt: string;
-  updatedAt: string;
-  agent: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-  };
-}
-
-interface OrderResponse {
-  message: string;
-  order: OrderDetails;
 }
 
 // Функції для роботи з API
@@ -637,6 +576,23 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error("Export orders API error:", error);
+        throw error;
+      }
+    },
+
+    // Generate PDF voucher for order
+    generateVoucher: async (orderId: string) => {
+      setAuthToken();
+      try {
+        const response = await api.get(`/api/orders/${orderId}/voucher`, {
+          responseType: "blob",
+          headers: {
+            Accept: "application/pdf",
+          },
+        });
+        return response.data;
+      } catch (error) {
+        console.error("Generate voucher API error:", error);
         throw error;
       }
     },

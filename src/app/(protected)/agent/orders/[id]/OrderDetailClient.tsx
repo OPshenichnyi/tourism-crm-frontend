@@ -18,6 +18,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bankAccountLoading, setBankAccountLoading] = useState(false);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
 
   const fetchOrder = async () => {
     try {
@@ -43,6 +45,32 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
       // Don't set error for bank account as it's not critical
     } finally {
       setBankAccountLoading(false);
+    }
+  };
+
+  const handleDownloadVoucher = async () => {
+    if (!order || order.statusOrder !== "approved") return;
+
+    setVoucherLoading(true);
+    setVoucherError(null);
+
+    try {
+      const blob = await apiService.orders.generateVoucher(orderId);
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `voucher-${order.reservationNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error generating voucher:", err);
+      setVoucherError("Failed to generate voucher. Please try again.");
+    } finally {
+      setVoucherLoading(false);
     }
   };
 
@@ -447,22 +475,29 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
 
         {/* Action Buttons */}
         <div className="mt-8 flex justify-end gap-4">
-          <button
-            className={`font-semibold py-3 px-6 rounded-lg transition-colors ${
-              order.statusOrder === "approved"
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-            onClick={() => {
-              if (order.statusOrder === "approved") {
-                // TODO: Implement voucher download functionality
-                console.log("Download voucher clicked");
-              }
-            }}
-            disabled={order.statusOrder !== "approved"}
-          >
-            Download voucher
-          </button>
+          <div className="flex flex-col items-end">
+            <button
+              className={`font-semibold py-3 px-6 rounded-lg transition-colors ${
+                order.statusOrder === "approved"
+                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+              onClick={handleDownloadVoucher}
+              disabled={order.statusOrder !== "approved" || voucherLoading}
+            >
+              {voucherLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Generating...
+                </div>
+              ) : (
+                "Download voucher"
+              )}
+            </button>
+            {voucherError && (
+              <p className="text-red-600 text-sm mt-1">{voucherError}</p>
+            )}
+          </div>
           <Link
             href={`/agent/orders/${orderId}/edit`}
             className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
