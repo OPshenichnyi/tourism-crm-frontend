@@ -483,7 +483,7 @@ export default function AgentOrdersPage() {
                     Hotel
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment Status
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -543,7 +543,7 @@ export default function AgentOrdersPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                          className={`px-2 pr-1 inline-flex justify-center items-center text-xs leading-5 font-semibold rounded-full
                           ${
                             order.statusOrder === "approved"
                               ? "bg-green-100 text-green-800"
@@ -556,7 +556,7 @@ export default function AgentOrdersPage() {
                             ? "Approved"
                             : order.statusOrder === "rejected"
                             ? "Rejected"
-                            : "Reservation pending"}
+                            : "Pending"}
                         </span>
                         <span className="text-xs text-gray-500">
                           Deposit: {order.depositStatus || "N/A"}
