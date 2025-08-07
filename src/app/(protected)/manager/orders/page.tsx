@@ -100,21 +100,6 @@ type FilterChangeHandler = (
   value: string | number | DateRange | null
 ) => void;
 
-interface ExportParams {
-  orderIds?: string[];
-  status?: "pending" | "approved" | "rejected";
-  search?: string;
-  agentId?: string;
-  dateFrom?: string | undefined;
-  dateTo?: string | undefined;
-  travelFrom?: string | undefined;
-  travelTo?: string | undefined;
-  minPrice?: number | undefined;
-  maxPrice?: number | undefined;
-  sortBy?: string;
-  sortOrder?: "asc" | "desc";
-}
-
 export default function ManagerOrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -258,39 +243,6 @@ export default function ManagerOrdersPage() {
     }
   };
 
-  const handleExportCSV = async () => {
-    try {
-      const exportParams: ExportParams = {
-        status: filters.status as "pending" | "approved" | "rejected",
-        search: filters.search,
-        agentId: filters.agentId,
-        dateFrom: filters.dateRange.start || undefined,
-        dateTo: filters.dateRange.end || undefined,
-        travelFrom: filters.travelDateRange.start || undefined,
-        travelTo: filters.travelDateRange.end || undefined,
-        minPrice: filters.minPrice || undefined,
-        maxPrice: filters.maxPrice || undefined,
-        sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder,
-      };
-
-      const response = await apiService.orders.exportManagerCSV(exportParams);
-      const url = window.URL.createObjectURL(new Blob([response]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute(
-        "download",
-        `orders-export-${new Date().toISOString()}.csv`
-      );
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (err) {
-      console.error("Error exporting orders:", err);
-      setError("Failed to export orders. Please try again later.");
-    }
-  };
-
   // Helper functions
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -313,14 +265,7 @@ export default function ManagerOrdersPage() {
             Total orders: {totalRecords}
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleExportCSV}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-          >
-            Export to CSV
-          </button>
-        </div>
+        <div className="flex gap-2"></div>
       </div>
 
       {/* Enhanced Filters Section */}
