@@ -127,7 +127,6 @@ export default function ManagerOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
   // Enhanced filters state for manager
   const [filters, setFilters] = useState<FilterState>({
@@ -259,39 +258,21 @@ export default function ManagerOrdersPage() {
     }
   };
 
-  const handleBulkStatusChange = async (newStatus: "approved" | "rejected") => {
-    try {
-      await Promise.all(
-        selectedOrders.map((orderId) =>
-          apiService.orders.updateStatus(orderId, newStatus)
-        )
-      );
-      fetchOrders();
-      setSelectedOrders([]);
-    } catch (err) {
-      console.error("Error updating orders status:", err);
-      setError("Failed to update orders status. Please try again later.");
-    }
-  };
-
   const handleExportCSV = async () => {
     try {
-      const exportParams: ExportParams =
-        selectedOrders.length > 0
-          ? { orderIds: selectedOrders }
-          : {
-              status: filters.status as "pending" | "approved" | "rejected",
-              search: filters.search,
-              agentId: filters.agentId,
-              dateFrom: filters.dateRange.start || undefined,
-              dateTo: filters.dateRange.end || undefined,
-              travelFrom: filters.travelDateRange.start || undefined,
-              travelTo: filters.travelDateRange.end || undefined,
-              minPrice: filters.minPrice || undefined,
-              maxPrice: filters.maxPrice || undefined,
-              sortBy: filters.sortBy,
-              sortOrder: filters.sortOrder,
-            };
+      const exportParams: ExportParams = {
+        status: filters.status as "pending" | "approved" | "rejected",
+        search: filters.search,
+        agentId: filters.agentId,
+        dateFrom: filters.dateRange.start || undefined,
+        dateTo: filters.dateRange.end || undefined,
+        travelFrom: filters.travelDateRange.start || undefined,
+        travelTo: filters.travelDateRange.end || undefined,
+        minPrice: filters.minPrice || undefined,
+        maxPrice: filters.maxPrice || undefined,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
+      };
 
       const response = await apiService.orders.exportManagerCSV(exportParams);
       const url = window.URL.createObjectURL(new Blob([response]));
@@ -312,18 +293,11 @@ export default function ManagerOrdersPage() {
 
   // Helper functions
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("uk-UA", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("uk-UA", {
-      style: "currency",
-      currency: "EUR",
-    }).format(amount);
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
   return (
@@ -340,22 +314,6 @@ export default function ManagerOrdersPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {selectedOrders.length > 0 && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleBulkStatusChange("approved")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Approve Selected
-              </button>
-              <button
-                onClick={() => handleBulkStatusChange("rejected")}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Reject Selected
-              </button>
-            </div>
-          )}
           <button
             onClick={handleExportCSV}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
@@ -579,11 +537,6 @@ export default function ManagerOrdersPage() {
             </select>
             <span className="text-sm text-gray-700">entries</span>
           </div>
-          {selectedOrders.length > 0 && (
-            <div className="text-sm text-gray-700">
-              {selectedOrders.length} orders selected
-            </div>
-          )}
         </div>
       </div>
 
@@ -636,37 +589,12 @@ export default function ManagerOrdersPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <input
-                      type="checkbox"
-                      checked={selectedOrders.length === orders.length}
-                      onChange={(e) => {
-                        setSelectedOrders(
-                          e.target.checked
-                            ? orders.map((order) => order.id)
-                            : []
-                        );
-                      }}
-                      className="rounded border-gray-300 text-blue-600"
-                    />
-                  </th>
                   <th
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                     onClick={() => handleSortChange("reservationNumber")}
                   >
                     Reservation #
                     {filters.sortBy === "reservationNumber" && (
-                      <span className="ml-1">
-                        {filters.sortOrder === "asc" ? "↑" : "↓"}
-                      </span>
-                    )}
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSortChange("agentName")}
-                  >
-                    Agent
-                    {filters.sortBy === "agentName" && (
                       <span className="ml-1">
                         {filters.sortOrder === "asc" ? "↑" : "↓"}
                       </span>
@@ -684,21 +612,13 @@ export default function ManagerOrdersPage() {
                     )}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Dates
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Location
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Dates
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSortChange("totalPrice")}
-                  >
-                    Price
-                    {filters.sortBy === "totalPrice" && (
-                      <span className="ml-1">
-                        {filters.sortOrder === "asc" ? "↑" : "↓"}
-                      </span>
-                    )}
+                    Hotel
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -713,9 +633,8 @@ export default function ManagerOrdersPage() {
                   <tr
                     key={order.id}
                     className={`
-                      ${selectedOrders.includes(order.id) ? "bg-blue-50" : ""}
                       ${
-                        order.payments?.balance?.status === "unpaid" &&
+                        order.depositStatus === "unpaid" &&
                         new Date(order.checkIn) <
                           new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
                           ? "bg-yellow-50"
@@ -723,28 +642,30 @@ export default function ManagerOrdersPage() {
                       }
                     `}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedOrders.includes(order.id)}
-                        onChange={(e) => {
-                          setSelectedOrders((prev) =>
-                            e.target.checked
-                              ? [...prev, order.id]
-                              : prev.filter((id) => id !== order.id)
-                          );
-                        }}
-                        className="rounded border-gray-300 text-blue-600"
-                      />
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      #{order.reservationNumber}
+                      <div className="flex flex-col">
+                        <span className="font-medium mb-1">
+                          #{order.reservationNumber}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {order.agentName}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.agentName}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{order.clientName}</span>
+                        <span className="text-gray-500">
+                          {order.clientPhone.join(", ")}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.clientCountry}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div>Check-in: {formatDate(order.checkIn)}</div>
+                      <div>Check-out: {formatDate(order.checkOut)}</div>
+                      <div className="text-xs text-gray-400">
+                        {order.nights} nights
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex flex-col">
@@ -764,30 +685,12 @@ export default function ManagerOrdersPage() {
                         <span className="text-gray-500">
                           {order.propertyNumber}
                         </span>
-                        {order.discount > 0 && (
-                          <span className="text-green-600">
-                            -{order.discount}%
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>Check-in: {formatDate(order.checkIn)}</div>
-                      <div>Check-out: {formatDate(order.checkOut)}</div>
-                      <div className="text-xs text-gray-400">
-                        {order.nights} nights
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{formatMoney(order.totalPrice)}</div>
-                      <div className="text-xs text-gray-400">
-                        Clean fee: {formatMoney(order.taxClean)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                          className={`px-2 pr-1 inline-flex justify-center items-center text-xs leading-5 font-semibold rounded-full
                           ${
                             order.statusOrder === "approved"
                               ? "bg-green-100 text-green-800"
@@ -800,7 +703,7 @@ export default function ManagerOrdersPage() {
                             ? "Approved"
                             : order.statusOrder === "rejected"
                             ? "Rejected"
-                            : "Reservation pending"}
+                            : "Pending"}
                         </span>
                         <span className="text-xs text-gray-500">
                           Deposit: {order.depositStatus || "N/A"}
@@ -811,18 +714,54 @@ export default function ManagerOrdersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Link
-                        href={`/manager/orders/${order.id}`}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        View
-                      </Link>
-                      <Link
-                        href={`/manager/orders/${order.id}/edit`}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        Edit
-                      </Link>
+                      <div className="flex items-center space-x-2">
+                        <Link
+                          href={`/manager/orders/${order.id}`}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="View"
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                        </Link>
+                        <Link
+                          href={`/manager/orders/${order.id}/edit`}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Edit"
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
