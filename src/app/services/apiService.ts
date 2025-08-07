@@ -474,7 +474,14 @@ const apiService = {
 
     // Отримання списку замовлень (GET /orders)
     getList: async (
-      params: { page?: number; limit?: number; status?: string } = {}
+      params: {
+        page?: number;
+        limit?: number;
+        status?: string;
+        search?: string;
+        sortBy?: string;
+        sortOrder?: "asc" | "desc";
+      } = {}
     ) => {
       setAuthToken();
       try {
@@ -534,8 +541,6 @@ const apiService = {
       agentId?: string;
       dateFrom?: string;
       dateTo?: string;
-      travelFrom?: string;
-      travelTo?: string;
       minPrice?: number;
       maxPrice?: number;
       sortBy?: string;

@@ -5,8 +5,6 @@ import DashboardLayout from "@/app/components/common/DashboardLayout";
 import apiService from "@/app/services/apiService";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 
 interface Guest {
   age: number;
@@ -80,14 +78,6 @@ interface Order {
 interface FilterState {
   status: string;
   search: string;
-  dateRange: {
-    start: string | null;
-    end: string | null;
-  };
-  travelDateRange: {
-    start: string | null;
-    end: string | null;
-  };
   sortBy: string;
   sortOrder: "asc" | "desc";
   limit: number;
@@ -96,19 +86,8 @@ interface FilterState {
 // Define type for filter change handler
 type FilterChangeHandler = (
   filterName: keyof FilterState,
-  value: string | number | DateRange | TravelDateRange
+  value: string | number
 ) => void;
-
-// Define date range types
-interface DateRange {
-  start: string | null;
-  end: string | null;
-}
-
-interface TravelDateRange {
-  start: string | null;
-  end: string | null;
-}
 
 export default function AgentOrdersPage() {
   const router = useRouter();
@@ -126,14 +105,6 @@ export default function AgentOrdersPage() {
   const [filters, setFilters] = useState<FilterState>({
     status: searchParams.get("status") || "",
     search: searchParams.get("search") || "",
-    dateRange: {
-      start: searchParams.get("dateFrom") || null,
-      end: searchParams.get("dateTo") || null,
-    },
-    travelDateRange: {
-      start: searchParams.get("travelFrom") || null,
-      end: searchParams.get("travelTo") || null,
-    },
     sortBy: searchParams.get("sortBy") || "createdOrder",
     sortOrder: (searchParams.get("sortOrder") as "asc" | "desc") || "desc",
     limit: Number(searchParams.get("limit")) || 10,
@@ -144,13 +115,6 @@ export default function AgentOrdersPage() {
     const params = new URLSearchParams();
     if (filters.status) params.set("status", filters.status);
     if (filters.search) params.set("search", filters.search);
-    if (filters.dateRange.start)
-      params.set("dateFrom", filters.dateRange.start);
-    if (filters.dateRange.end) params.set("dateTo", filters.dateRange.end);
-    if (filters.travelDateRange.start)
-      params.set("travelFrom", filters.travelDateRange.start);
-    if (filters.travelDateRange.end)
-      params.set("travelTo", filters.travelDateRange.end);
     params.set("sortBy", filters.sortBy);
     params.set("sortOrder", filters.sortOrder);
     params.set("limit", filters.limit.toString());
@@ -174,12 +138,6 @@ export default function AgentOrdersPage() {
 
       if (filters.status) params.status = filters.status;
       if (filters.search) params.search = filters.search;
-      if (filters.dateRange.start) params.dateFrom = filters.dateRange.start;
-      if (filters.dateRange.end) params.dateTo = filters.dateRange.end;
-      if (filters.travelDateRange.start)
-        params.travelFrom = filters.travelDateRange.start;
-      if (filters.travelDateRange.end)
-        params.travelTo = filters.travelDateRange.end;
 
       const response = await apiService.orders.getList(params);
       setOrders(response.orders);
@@ -279,65 +237,43 @@ export default function AgentOrdersPage() {
       </div>
 
       {/* Enhanced Filters Section */}
-      <div className="bg-white rounded-lg shadow mb-6 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white rounded-lg shadow mb-6 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Status Filter */}
           <div>
             <label
               htmlFor="status"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
               Order Status
             </label>
-            <select
-              id="status"
-              value={filters.status}
-              onChange={(e) => handleFilterChange("status", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="approve">Approved</option>
-              <option value="unpaid">Unpaid</option>
-              <option value="paid">Paid</option>
-            </select>
-          </div>
-
-          {/* Date Range Filters */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Creation Date Range
-            </label>
-            <div className="flex gap-2">
-              <DatePicker
-                selected={
-                  filters.dateRange.start
-                    ? new Date(filters.dateRange.start)
-                    : null
-                }
-                onChange={(date: Date | null) =>
-                  handleFilterChange("dateRange", {
-                    ...filters.dateRange,
-                    start: date ? date.toISOString() : null,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholderText="Start Date"
-                dateFormat="dd/MM/yyyy"
-              />
-              <DatePicker
-                selected={
-                  filters.dateRange.end ? new Date(filters.dateRange.end) : null
-                }
-                onChange={(date: Date | null) =>
-                  handleFilterChange("dateRange", {
-                    ...filters.dateRange,
-                    end: date ? date.toISOString() : null,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholderText="End Date"
-                dateFormat="dd/MM/yyyy"
-              />
+            <div className="relative">
+              <select
+                id="status"
+                value={filters.status}
+                onChange={(e) => handleFilterChange("status", e.target.value)}
+                className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white"
+              >
+                <option value="">Select a status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg
+                  className="h-5 w-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
 
@@ -345,7 +281,7 @@ export default function AgentOrdersPage() {
           <div>
             <label
               htmlFor="search"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
               Search
             </label>
@@ -355,31 +291,48 @@ export default function AgentOrdersPage() {
               value={filters.search}
               onChange={(e) => handleFilterChange("search", e.target.value)}
               placeholder="Search by client name, location..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
           </div>
         </div>
 
         {/* Records per page selector */}
-        <div className="mt-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
+        <div className="mt-6 flex justify-between items-center">
+          <div className="flex items-center gap-3">
             <label
               htmlFor="limit"
               className="text-sm font-medium text-gray-700"
             >
               Show
             </label>
-            <select
-              id="limit"
-              value={filters.limit}
-              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
+            <div className="relative">
+              <select
+                id="limit"
+                value={filters.limit}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="px-4 py-2 pr-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white"
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg
+                  className="h-4 w-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </div>
             <span className="text-sm text-gray-700">entries</span>
           </div>
         </div>
