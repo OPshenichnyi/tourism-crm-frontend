@@ -220,11 +220,11 @@ export default function AgentOrdersPage() {
 
   // Format date helper function
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("uk-UA", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
   // Handle page size change
@@ -474,10 +474,13 @@ export default function AgentOrdersPage() {
                     )}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Dates
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Location
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Dates
+                    Hotel
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Payment Status
@@ -503,7 +506,19 @@ export default function AgentOrdersPage() {
                       #{order.reservationNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.clientCountry}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{order.clientName}</span>
+                        <span className="text-gray-500">
+                          {order.clientPhone.join(", ")}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div>Check-in: {formatDate(order.checkIn)}</div>
+                      <div>Check-out: {formatDate(order.checkOut)}</div>
+                      <div className="text-xs text-gray-400">
+                        {order.nights} nights
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex flex-col">
@@ -523,30 +538,6 @@ export default function AgentOrdersPage() {
                         <span className="text-gray-500">
                           {order.propertyNumber}
                         </span>
-                        {order.discount > 0 && (
-                          <span className="text-green-600">
-                            -{order.discount}%
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="font-medium">{order.clientName}</div>
-                      <div className="text-xs text-gray-400">
-                        {order.clientEmail}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        {order.clientPhone.join(", ")}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        ID: {order.clientDocumentNumber || "Не вказано"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>Check-in: {formatDate(order.checkIn)}</div>
-                      <div>Check-out: {formatDate(order.checkOut)}</div>
-                      <div className="text-xs text-gray-400">
-                        {order.nights} nights
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
