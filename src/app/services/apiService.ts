@@ -8,7 +8,8 @@ import {
 import { OrderDetails, OrderResponse } from "@/app/types/order";
 
 // Чітко вкажіть URL, який ви бачили в Postman
-const API_URL = "http://localhost:3000";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://travel-agentonline.com:3000/api";
 
 // Створюємо екземпляр axios з базовою URL
 const api = axios.create({
