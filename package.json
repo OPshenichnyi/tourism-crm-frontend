@@ -6,7 +6,8 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test -c playwright.config.ts"
   },
   "dependencies": {
     "@types/react-datepicker": "^7.0.0",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.54.2",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/node": "^20",
     "@types/react": "^19",

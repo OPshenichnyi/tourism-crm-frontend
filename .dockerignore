@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+coverage
+build
+.git
+.vercel
+.env*
+*.log
+*Dockerfile*
+*docker-compose*
+.vscode
+.idea 
