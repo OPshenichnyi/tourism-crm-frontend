@@ -7,7 +7,5 @@ build
 .vercel
 .env*
 *.log
-*Dockerfile*
-*docker-compose*
 .vscode
 .idea 
