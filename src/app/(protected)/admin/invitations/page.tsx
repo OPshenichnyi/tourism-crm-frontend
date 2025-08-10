@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/app/components/common/DashboardLayout";
 import apiService from "@/app/services/apiService"; // Імпортуємо наш API сервіс
+import { getRegistrationUrl } from "@/app/config/constants";
 
 interface Invitation {
   id: string;
@@ -12,6 +13,7 @@ interface Invitation {
   invitedAt: string; // Змінив з expiresAt на invitedAt згідно з API
   used: boolean;
   createdInovation: string;
+  token?: string; // Add token field
 }
 
 export default function AdminInvitationsPage() {
@@ -36,15 +38,18 @@ export default function AdminInvitationsPage() {
       const response = await apiService.invitations.getList();
 
       // Перетворюємо отримані дані в масив Invitation[]
-      const fetchedInvitations = response.invitations.map((invitation) => ({
-        id: invitation.id,
-        email: invitation.email,
-        role: invitation.role,
-        invitedBy: invitation.invitedBy,
-        invitedAt: invitation.invitedAt,
-        used: invitation.used,
-        createdInovation: invitation.createdAt,
-      }));
+      const fetchedInvitations = response.invitations.map(
+        (invitation: any) => ({
+          id: invitation.id,
+          email: invitation.email,
+          role: invitation.role,
+          invitedBy: invitation.invitedBy,
+          invitedAt: invitation.invitedAt,
+          used: invitation.used,
+          createdInovation: invitation.createdAt,
+          token: invitation.token, // Add token to the fetched data
+        })
+      );
       setInvitations(fetchedInvitations);
     } catch (err) {
       console.error("Error fetching invitations:", err);
@@ -107,6 +112,20 @@ export default function AdminInvitationsPage() {
       setCreateError(err.message || "Помилка при скасуванні запрошення");
 
       // Очищаємо повідомлення про помилку через 3 секунди
+      setTimeout(() => setCreateError(null), 3000);
+    }
+  };
+
+  // Copy registration link to clipboard
+  const copyRegistrationLink = async (token: string) => {
+    try {
+      const registrationUrl = getRegistrationUrl(token);
+      await navigator.clipboard.writeText(registrationUrl);
+      setCreateSuccess("Посилання для реєстрації скопійовано в буфер обміну");
+      setTimeout(() => setCreateSuccess(null), 3000);
+    } catch (err) {
+      console.error("Error copying to clipboard:", err);
+      setCreateError("Помилка при копіюванні посилання");
       setTimeout(() => setCreateError(null), 3000);
     }
   };
@@ -302,6 +321,12 @@ export default function AdminInvitationsPage() {
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
+                    Посилання для реєстрації
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Дії
                   </th>
                 </tr>
@@ -328,6 +353,26 @@ export default function AdminInvitationsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(invitation.createdInovation)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {invitation.token && !invitation.used ? (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded">
+                            {getRegistrationUrl(invitation.token)}
+                          </span>
+                          <button
+                            onClick={() =>
+                              copyRegistrationLink(invitation.token!)
+                            }
+                            className="text-blue-600 hover:text-blue-900 text-xs"
+                            title="Копіювати посилання"
+                          >
+                            📋
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {!invitation.used && (
