@@ -187,7 +187,14 @@ export default function AdminInvitationsPage() {
                 id="role"
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundPosition: "right 0.75rem center",
+                  backgroundRepeat: "no-repeat",
+                  backgroundSize: "1.5em 1.5em",
+                  paddingRight: "2.75rem",
+                }}
               >
                 <option value="manager">Manager</option>
                 <option value="agent">Agent</option>
@@ -354,14 +361,14 @@ export default function AdminInvitationsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {invitation.token && !invitation.used ? (
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded">
+                          <span className="text-xs text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded max-w-xs truncate block">
                             {getRegistrationUrl(invitation.token)}
                           </span>
                           <button
                             onClick={() =>
                               copyRegistrationLink(invitation.token!)
                             }
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 flex-shrink-0"
                             title="Copy registration link"
                           >
                             <svg
