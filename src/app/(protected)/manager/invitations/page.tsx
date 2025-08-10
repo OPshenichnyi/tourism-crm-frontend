@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/app/components/common/DashboardLayout";
-import apiService from "@/app/services/apiService"; // Імпортуємо наш API сервіс
+import apiService from "@/app/services/apiService"; // Import our API service
 import { getRegistrationUrl } from "@/app/config/constants";
 
 interface Invitation {
@@ -22,13 +22,13 @@ export default function ManagerInvitationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Стан для нового запрошення
+  // State for new invitation
   const [newEmail, setNewEmail] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
-  // Отримання списку запрошень
+  // Fetch invitations list
   const fetchInvitations = async () => {
     setIsLoading(true);
     setError(null);
@@ -49,18 +49,18 @@ export default function ManagerInvitationsPage() {
       setInvitations(fetchedInvitations);
     } catch (err) {
       console.error("Error fetching invitations:", err);
-      setError(err.message || "Помилка при отриманні списку запрошень");
+      setError(err.message || "Error fetching invitations list");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Завантаження даних при монтуванні компонента
+  // Load data when component mounts
   useEffect(() => {
     fetchInvitations();
   }, []);
 
-  // Створення нового запрошення
+  // Create new invitation
   const createInvitation = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsCreating(true);
@@ -73,35 +73,35 @@ export default function ManagerInvitationsPage() {
         role: "agent",
       });
       fetchInvitations();
-      setCreateSuccess(`Запрошення успішно створено для ${newEmail}`);
+      setCreateSuccess(`Invitation successfully created for ${newEmail}`);
 
-      // Очищаємо форму
+      // Clear form
       setNewEmail("");
     } catch (err) {
       console.error("Error creating invitation:", err);
-      setCreateError(err.message || "Помилка при створенні запрошення");
+      setCreateError(err.message || "Error creating invitation");
     } finally {
       setIsCreating(false);
     }
   };
 
-  // Скасування запрошення
+  // Cancel invitation
   const cancelInvitation = async (id: string) => {
     try {
       await apiService.invitations.cancel(id);
-      // Видаляємо запрошення зі списку (імітація оновлення даних)
+      // Remove invitation from list (simulate data update)
       setInvitations((prev) =>
         prev.filter((invitation) => invitation.id !== id)
       );
-      setCreateSuccess("Запрошення успішно скасовано");
+      setCreateSuccess("Invitation successfully cancelled");
 
-      // Очищаємо повідомлення про успіх через 3 секунди
+      // Clear success message after 3 seconds
       setTimeout(() => setCreateSuccess(null), 3000);
     } catch (err) {
       console.error("Error cancelling invitation:", err);
-      setCreateError(err.message || "Помилка при скасуванні запрошення");
+      setCreateError(err.message || "Error cancelling invitation");
 
-      // Очищаємо повідомлення про помилку через 3 секунди
+      // Clear error message after 3 seconds
       setTimeout(() => setCreateError(null), 3000);
     }
   };
@@ -111,42 +111,39 @@ export default function ManagerInvitationsPage() {
     try {
       const registrationUrl = getRegistrationUrl(token);
       await navigator.clipboard.writeText(registrationUrl);
-      setCreateSuccess("Посилання для реєстрації скопійовано в буфер обміну");
+      setCreateSuccess("Registration link copied to clipboard");
       setTimeout(() => setCreateSuccess(null), 3000);
     } catch (err) {
       console.error("Error copying to clipboard:", err);
-      setCreateError("Помилка при копіюванні посилання");
+      setCreateError("Error copying registration link");
       setTimeout(() => setCreateError(null), 3000);
     }
   };
 
-  // Форматування дати
+  // Format date
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    };
-    return new Date(dateString).toLocaleDateString("uk-UA", options);
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
   };
 
   return (
     <DashboardLayout role="manager">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">
-          Керування запрошеннями
+          Invitation Management
         </h1>
         <p className="text-gray-600">
-          Створюйте запрошення для нових агентів системи
+          Create invitations for new agents in the system
         </p>
       </div>
 
-      {/* Форма створення запрошення */}
+      {/* Create invitation form */}
       <div className="bg-white rounded-lg shadow mb-6 p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
-          Створити нове запрошення
+          Create New Invitation
         </h2>
 
         <form onSubmit={createInvitation} className="space-y-4">
@@ -155,7 +152,7 @@ export default function ManagerInvitationsPage() {
               htmlFor="email"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Email користувача
+              User Email
             </label>
             <input
               type="email"
@@ -167,7 +164,7 @@ export default function ManagerInvitationsPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
             <p className="mt-1 text-sm text-gray-500">
-              Користувач отримає роль "Агент"
+              User will receive the "Agent" role
             </p>
           </div>
 
@@ -211,21 +208,21 @@ export default function ManagerInvitationsPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Створення...
+                  Creating...
                 </>
               ) : (
-                "Створити запрошення"
+                "Create Invitation"
               )}
             </button>
           </div>
         </form>
       </div>
 
-      {/* Список запрошень */}
+      {/* Invitations list */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">
-            Активні запрошення
+            Active Invitations
           </h2>
         </div>
 
@@ -255,10 +252,10 @@ export default function ManagerInvitationsPage() {
               />
             </svg>
             <h3 className="mt-2 text-sm font-medium text-gray-900">
-              Немає активних запрошень
+              No Active Invitations
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Створіть нове запрошення, щоб додати агента в систему.
+              Create a new invitation to add an agent to the system.
             </p>
           </div>
         ) : (
@@ -276,31 +273,31 @@ export default function ManagerInvitationsPage() {
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Роль
+                    Role
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Статус
+                    Status
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Термін дії
+                    Date
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Посилання для реєстрації
+                    Registration Link
                   </th>
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Дії
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -311,7 +308,7 @@ export default function ManagerInvitationsPage() {
                       {invitation.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      Агент
+                      Agent
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -321,7 +318,7 @@ export default function ManagerInvitationsPage() {
                             : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
-                        {invitation.used ? "Використано" : "Активне"}
+                        {invitation.used ? "Used" : "Active"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -338,7 +335,7 @@ export default function ManagerInvitationsPage() {
                               copyRegistrationLink(invitation.token!)
                             }
                             className="text-blue-600 hover:text-blue-900 text-xs"
-                            title="Копіювати посилання"
+                            title="Copy registration link"
                           >
                             📋
                           </button>
@@ -353,7 +350,7 @@ export default function ManagerInvitationsPage() {
                           onClick={() => cancelInvitation(invitation.id)}
                           className="text-red-600 hover:text-red-900"
                         >
-                          Скасувати
+                          Cancel
                         </button>
                       )}
                     </td>
