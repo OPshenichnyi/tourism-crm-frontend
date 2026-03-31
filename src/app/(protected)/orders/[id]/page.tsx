@@ -220,9 +220,12 @@ export default function OrderDetailsPage({ params }: PageProps) {
                   <p className="text-sm text-gray-500">
                     Вік дітей:{" "}
                     {order.guests.children
-                      .map((child: Guest) => child.age)
-                      .join(", ")}{" "}
-                    років
+                      .map((child: Guest) =>
+                        child.months && child.months > 0
+                          ? `${child.age} year ${child.months}m`
+                          : `${child.age} year`
+                      )
+                      .join(", ")}
                   </p>
                 )}
               </div>
