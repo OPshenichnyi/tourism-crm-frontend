@@ -159,12 +159,6 @@ export default function OrderDetailsPage({ params }: PageProps) {
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">
-                  Country of Travel:
-                </span>
-                <p className="text-gray-900">{order.countryTravel}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-500">
                   City of Travel:
                 </span>
                 <p className="text-gray-900">{order.cityTravel}</p>

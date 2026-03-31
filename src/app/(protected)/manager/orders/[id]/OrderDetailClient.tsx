@@ -278,12 +278,6 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-500">
-                  Country of Travel:
-                </span>
-                <span className="text-gray-900">{order.countryTravel}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">
                   City of Travel:
                 </span>
                 <span className="text-gray-900">{order.cityTravel}</span>
