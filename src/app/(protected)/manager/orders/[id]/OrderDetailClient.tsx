@@ -343,8 +343,17 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                     Children age:
                   </span>
                   <span className="text-gray-900">
-                    {order.guests.children.map((child) => child.age).join(", ")}{" "}
-                    years
+                    {order.guests.children
+                      .map((child) => {
+                        if (child.age === 0 && child.months && child.months > 0) {
+                          return `baby ${child.months} month${child.months > 1 ? "s" : ""}`;
+                        }
+                        if (child.months && child.months > 0) {
+                          return `${child.age} year ${child.months}m`;
+                        }
+                        return `${child.age} year`;
+                      })
+                      .join(", ")}
                   </span>
                 </div>
               )}

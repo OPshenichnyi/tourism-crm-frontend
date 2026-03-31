@@ -1,5 +1,6 @@
 export interface Guest {
   age: number;
+  months?: number;
 }
 
 export interface Guests {
