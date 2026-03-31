@@ -129,21 +129,24 @@ export default function CreateOrderPage() {
 
   // Function to generate reservation number
   const generateReservationNumber = (): string => {
-    const { clientCountry, checkIn, propertyNumber } = formData;
+    const { clientCountry, checkIn, checkOut, propertyNumber } = formData;
 
-    if (!clientCountry || !checkIn || !propertyNumber) {
+    if (!clientCountry || !checkIn || !checkOut || !propertyNumber) {
       return "";
     }
 
-    // Format check-in date as DDMMYYYY
+    // Format check-in date as DDMM
     const checkInDate = new Date(checkIn);
-    const day = checkInDate.getDate().toString().padStart(2, "0");
-    const month = (checkInDate.getMonth() + 1).toString().padStart(2, "0");
-    const year = checkInDate.getFullYear().toString();
-    const formattedDate = `${day}${month}${year}`;
+    const inDay = checkInDate.getDate().toString().padStart(2, "0");
+    const inMonth = (checkInDate.getMonth() + 1).toString().padStart(2, "0");
 
-    // Generate reservation number: [Country Code][Date][N][Property Number]
-    return `${clientCountry}${formattedDate}N${propertyNumber}`;
+    // Format check-out date as DDMM
+    const checkOutDate = new Date(checkOut);
+    const outDay = checkOutDate.getDate().toString().padStart(2, "0");
+    const outMonth = (checkOutDate.getMonth() + 1).toString().padStart(2, "0");
+
+    // Generate reservation number: [Country Code][CheckInDDMM][CheckOutDDMM][N][Property Number]
+    return `${clientCountry}${inDay}${inMonth}${outDay}${outMonth}N${propertyNumber}`;
   };
 
   // Update reservation number when dependent fields change
@@ -153,7 +156,7 @@ export default function CreateOrderPage() {
       ...prev,
       reservationNumber: newReservationNumber,
     }));
-  }, [formData.clientCountry, formData.checkIn, formData.propertyNumber]);
+  }, [formData.clientCountry, formData.checkIn, formData.checkOut, formData.propertyNumber]);
 
   // Get user data on component mount
   useEffect(() => {
