@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/app/components/common/DashboardLayout";
 import apiService from "@/app/services/apiService";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -101,40 +100,24 @@ type FilterChangeHandler = (
 ) => void;
 
 export default function ManagerOrdersPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
   // State
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
 
-  // Enhanced filters state for manager
   const [filters, setFilters] = useState<FilterState>({
-    status: searchParams.get("status") || "",
-    search: searchParams.get("search") || "",
-    agentId: searchParams.get("agentId") || "",
-    dateRange: {
-      start: searchParams.get("dateFrom") || null,
-      end: searchParams.get("dateTo") || null,
-    },
-    travelDateRange: {
-      start: searchParams.get("travelFrom") || null,
-      end: searchParams.get("travelTo") || null,
-    },
-    sortBy: searchParams.get("sortBy") || "createdOrder",
-    sortOrder: (searchParams.get("sortOrder") as "asc" | "desc") || "desc",
-    limit: Number(searchParams.get("limit")) || 10,
-    minPrice: searchParams.get("minPrice")
-      ? Number(searchParams.get("minPrice"))
-      : null,
-    maxPrice: searchParams.get("maxPrice")
-      ? Number(searchParams.get("maxPrice"))
-      : null,
+    status: "",
+    search: "",
+    agentId: "",
+    dateRange: { start: null, end: null },
+    travelDateRange: { start: null, end: null },
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    limit: 10,
+    minPrice: null,
+    maxPrice: null,
   });
 
   // Fetch agents for filter
@@ -150,53 +133,25 @@ export default function ManagerOrdersPage() {
     fetchAgents();
   }, []);
 
-  // Update URL with filters
-  const updateUrlWithFilters = () => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
-        if (typeof value === "object") {
-          if (value.start) params.set(`${key}From`, value.start);
-          if (value.end) params.set(`${key}To`, value.end);
-        } else {
-          params.set(key, String(value));
-        }
-      }
-    });
-    params.set("page", currentPage.toString());
-    router.push(`?${params.toString()}`);
-  };
-
-  // Fetch orders
+  // Fetch ALL orders by iterating through all backend pages
   const fetchOrders = async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const params: Record<string, string | number> = {
-        page: currentPage,
-        limit: filters.limit,
-        sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder,
-      };
+      const first = await apiService.orders.getManagerList({ page: 1 });
+      const all: Order[] = [...(first.orders ?? [])];
+      const backendTotalPages: number = first.totalPages ?? 1;
 
-      // Add all filters to params
-      if (filters.status) params.status = filters.status;
-      if (filters.search) params.search = filters.search;
-      if (filters.agentId) params.agentId = filters.agentId;
-      if (filters.dateRange.start) params.dateFrom = filters.dateRange.start;
-      if (filters.dateRange.end) params.dateTo = filters.dateRange.end;
-      if (filters.travelDateRange.start)
-        params.travelFrom = filters.travelDateRange.start;
-      if (filters.travelDateRange.end)
-        params.travelTo = filters.travelDateRange.end;
-      if (filters.minPrice) params.minPrice = filters.minPrice;
-      if (filters.maxPrice) params.maxPrice = filters.maxPrice;
+      if (backendTotalPages > 1) {
+        const pageRequests = [];
+        for (let p = 2; p <= backendTotalPages; p++) {
+          pageRequests.push(apiService.orders.getManagerList({ page: p }));
+        }
+        const results = await Promise.all(pageRequests);
+        results.forEach((r) => all.push(...(r.orders ?? [])));
+      }
 
-      const response = await apiService.orders.getManagerList(params);
-      setOrders(response.orders);
-      setTotalPages(response.totalPages);
-      setTotalRecords(response.total);
+      setAllOrders(all);
     } catch (err) {
       console.error("Error fetching orders:", err);
       setError("Failed to load orders. Please try again later.");
@@ -205,11 +160,94 @@ export default function ManagerOrdersPage() {
     }
   };
 
-  // Effect to update URL and fetch orders
   useEffect(() => {
-    updateUrlWithFilters();
     fetchOrders();
-  }, [currentPage, filters]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Client-side filtering + sorting
+  const filteredOrders = useMemo(() => {
+    let result = [...allOrders];
+
+    if (filters.status) {
+      result = result.filter((o) => o.statusOrder === filters.status);
+    }
+
+    if (filters.agentId) {
+      result = result.filter((o) => o.agentId === filters.agentId);
+    }
+
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(
+        (o) =>
+          o.clientName?.toLowerCase().includes(q) ||
+          o.countryTravel?.toLowerCase().includes(q) ||
+          o.cityTravel?.toLowerCase().includes(q) ||
+          o.propertyName?.toLowerCase().includes(q)
+      );
+    }
+
+    if (filters.minPrice !== null) {
+      result = result.filter((o) => (o.totalPrice ?? 0) >= filters.minPrice!);
+    }
+    if (filters.maxPrice !== null) {
+      result = result.filter((o) => (o.totalPrice ?? 0) <= filters.maxPrice!);
+    }
+
+    if (filters.dateRange.start) {
+      const start = new Date(filters.dateRange.start);
+      result = result.filter((o) => new Date(o.createdAt) >= start);
+    }
+    if (filters.dateRange.end) {
+      const end = new Date(filters.dateRange.end);
+      result = result.filter((o) => new Date(o.createdAt) <= end);
+    }
+
+    if (filters.travelDateRange.start) {
+      const start = new Date(filters.travelDateRange.start);
+      result = result.filter((o) => new Date(o.checkIn) >= start);
+    }
+    if (filters.travelDateRange.end) {
+      const end = new Date(filters.travelDateRange.end);
+      result = result.filter((o) => new Date(o.checkIn) <= end);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let aVal: string | number = 0;
+      let bVal: string | number = 0;
+      switch (filters.sortBy) {
+        case "clientName":
+          aVal = a.clientName ?? "";
+          bVal = b.clientName ?? "";
+          break;
+        case "totalPrice":
+          aVal = a.totalPrice ?? 0;
+          bVal = b.totalPrice ?? 0;
+          break;
+        case "reservationNumber":
+          aVal = String(a.reservationNumber ?? "");
+          bVal = String(b.reservationNumber ?? "");
+          break;
+        default:
+          aVal = new Date(a.createdAt).getTime();
+          bVal = new Date(b.createdAt).getTime();
+      }
+      if (aVal < bVal) return filters.sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return filters.sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [allOrders, filters]);
+
+  // Pagination
+  const totalRecords = filteredOrders.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / filters.limit));
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * filters.limit;
+    return filteredOrders.slice(start, start + filters.limit);
+  }, [filteredOrders, currentPage, filters.limit]);
 
   // Handlers
   const handleFilterChange: FilterChangeHandler = (filterName, value) => {
@@ -286,9 +324,9 @@ export default function ManagerOrdersPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
               <option value="">All Statuses</option>
-              <option value="approve">Approved</option>
-              <option value="unpaid">Unpaid</option>
-              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
 
@@ -507,7 +545,7 @@ export default function ManagerOrdersPage() {
               {error}
             </div>
           </div>
-        ) : orders.length === 0 ? (
+        ) : paginatedOrders.length === 0 ? (
           <div className="text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -574,7 +612,7 @@ export default function ManagerOrdersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {orders.map((order) => (
+                {paginatedOrders.map((order) => (
                   <tr
                     key={order.id}
                     className={`
@@ -716,7 +754,7 @@ export default function ManagerOrdersPage() {
         )}
 
         {/* Pagination */}
-        {!isLoading && orders.length > 0 && (
+        {!isLoading && filteredOrders.length > 0 && (
           <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
             <div className="text-sm text-gray-700">
               Showing {(currentPage - 1) * filters.limit + 1} to{" "}

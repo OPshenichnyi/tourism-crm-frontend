@@ -542,6 +542,8 @@ const apiService = {
       agentId?: string;
       dateFrom?: string;
       dateTo?: string;
+      travelFrom?: string;
+      travelTo?: string;
       minPrice?: number;
       maxPrice?: number;
       sortBy?: string;
