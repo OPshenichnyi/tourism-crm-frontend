@@ -217,6 +217,11 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
           balanceAmount: orderData.balanceAmount,
         });
 
+        if (orderData.statusOrder === "approved") {
+          router.replace(`/agent/orders/${orderId}`);
+          return;
+        }
+
         // Update order state with converted data
         setOrder({
           ...orderData,
@@ -438,9 +443,6 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
     if (!formData.clientCountry.trim()) {
       newErrors.clientCountry = "Client country is required";
     }
-    if (!formData.countryTravel.trim()) {
-      newErrors.countryTravel = "Country of travel is required";
-    }
     if (!formData.cityTravel.trim()) {
       newErrors.cityTravel = "City of travel is required";
     }
@@ -520,7 +522,7 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
         checkOut: formData.checkOut,
         nights: formData.nights,
         clientCountry: formData.clientCountry,
-        countryTravel: formData.countryTravel,
+        countryTravel: "Greece",
         cityTravel: formData.cityTravel,
         propertyName: formData.propertyName,
         propertyNumber: formData.propertyNumber,
@@ -704,30 +706,6 @@ export default function EditOrderPage({ params }: EditOrderPageProps) {
               {errors.clientCountry && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.clientCountry}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="countryTravel"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Country of Travel <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="countryTravel"
-                name="countryTravel"
-                value={formData.countryTravel}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border ${
-                  errors.countryTravel ? "border-red-500" : "border-gray-300"
-                } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-              />
-              {errors.countryTravel && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.countryTravel}
                 </p>
               )}
             </div>
